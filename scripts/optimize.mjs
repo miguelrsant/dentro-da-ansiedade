@@ -44,29 +44,51 @@ function smoothField(field, stride, idx, weight, iterations, normalize) {
   return out;
 }
 
-// Gives the scans the reference's polished look: skin (and, less, hair) gets very smooth normals so
-// faces read as glass, clothes keep their folds but lose the scan's grain, and the baked AO is softened.
-// Vertex colours from the bake: r, g = AO, b = skin, a = hair.
+// Vertices split along UV seams share a position; smoothing runs on these position groups so both
+// sides of a seam end up with the same normal and AO.
+function positionGroups(P) {
+  const n = P.getCount(), map = new Map(), gid = new Uint32Array(n), v = [];
+  let count = 0;
+  for (let i = 0; i < n; i++) {
+    P.getElement(i, v);
+    const k = v.map(x => Math.round(x * 100)).join(',');
+    let id = map.get(k);
+    if (id === undefined) { id = count++; map.set(k, id); }
+    gid[i] = id;
+  }
+  return { gid, count };
+}
+
+// Gives the scans the reference's polished look: skin gets very smooth normals so faces read as glass,
+// hair a little, and clothes keep theirs (their folds come from the detail texture now). The baked AO
+// is softened. Vertex colours from the bake: r, g = AO, b = skin, a = hair.
 function polish() {
   return doc => {
     for (const mesh of doc.getRoot().listMeshes()) for (const prim of mesh.listPrimitives()) {
-      const N = prim.getAttribute('NORMAL'), C = prim.getAttribute('COLOR_0'), I = prim.getIndices();
+      const N = prim.getAttribute('NORMAL'), C = prim.getAttribute('COLOR_0'), I = prim.getIndices(), P = prim.getAttribute('POSITION');
       if (!N || !C || !I) continue;
-      const n = N.getCount(), idx = I.getArray();
-      const nrm = new Float32Array(n * 3), ao = new Float32Array(n * 2), wSkin = new Float32Array(n), wCloth = new Float32Array(n), all = new Float32Array(n).fill(1);
+      const n = N.getCount(), { gid, count } = positionGroups(P);
+      const idx = Uint32Array.from(I.getArray(), i => gid[i]);
+      const nrm = new Float32Array(count * 3), ao = new Float32Array(count * 2), wSkin = new Float32Array(count), all = new Float32Array(count).fill(1), cnt = new Float32Array(count);
       const c = [], v = [];
       for (let i = 0; i < n; i++) {
-        N.getElement(i, v); nrm.set(v, i * 3);
-        C.getElement(i, c); ao[i * 2] = c[0]; ao[i * 2 + 1] = c[1];
-        wSkin[i] = Math.max(c[2], c[3] * 0.6);
-        wCloth[i] = 0.6 * (1 - wSkin[i]);
+        const g = gid[i];
+        N.getElement(i, v); for (let k = 0; k < 3; k++) nrm[g * 3 + k] += v[k];
+        C.getElement(i, c); ao[g * 2] += c[0]; ao[g * 2 + 1] += c[1];
+        wSkin[g] += Math.max(c[2], c[3] * 0.3);
+        cnt[g]++;
       }
-      let out = smoothField(nrm, 3, idx, wSkin, 6, true);
-      out = smoothField(out, 3, idx, wCloth, 2, true);
+      for (let g = 0; g < count; g++) {
+        const l = Math.hypot(nrm[g * 3], nrm[g * 3 + 1], nrm[g * 3 + 2]) || 1;
+        for (let k = 0; k < 3; k++) nrm[g * 3 + k] /= l;
+        ao[g * 2] /= cnt[g]; ao[g * 2 + 1] /= cnt[g]; wSkin[g] /= cnt[g];
+      }
+      const out = smoothField(nrm, 3, idx, wSkin, 6, true);
       const aoS = smoothField(ao, 2, idx, all, 3, false);
       for (let i = 0; i < n; i++) {
-        N.setElement(i, [out[i * 3], out[i * 3 + 1], out[i * 3 + 2]]);
-        C.getElement(i, c); c[0] = aoS[i * 2]; c[1] = aoS[i * 2 + 1]; C.setElement(i, c);
+        const g = gid[i];
+        N.setElement(i, [out[g * 3], out[g * 3 + 1], out[g * 3 + 2]]);
+        C.getElement(i, c); c[0] = aoS[g * 2]; c[1] = aoS[g * 2 + 1]; C.setElement(i, c);
       }
     }
   };
@@ -79,17 +101,15 @@ const src = 'assets-src/raw', dst = 'public/models';
 fs.mkdirSync(dst, { recursive: true });
 for (const f of fs.readdirSync(src).filter(f => f.endsWith('.glb'))) {
   const doc = await io.read(path.join(src, f));
-  // the baked material only carries vertex colors; strip any leftover textures
+  // the baked material only carries vertex colours; the detail textures are loaded separately
   for (const m of doc.getRoot().listMaterials()) { m.setBaseColorTexture(null); m.setNormalTexture(null); }
-  // no textures, so UVs are dead weight (and would keep seams from welding)
-  for (const mesh of doc.getRoot().listMeshes()) for (const prim of mesh.listPrimitives()) prim.setAttribute('TEXCOORD_0', null);
   await doc.transform(
     weld(),
     polish(),
     resample({ tolerance: 0.0005 }),
     dedup(),
     prune({ keepAttributes: true }),
-    quantize({ quantizePosition: 14, quantizeNormal: 10, quantizeColor: 8, quantizeWeight: 8 }),
+    quantize({ quantizePosition: 14, quantizeNormal: 10, quantizeTexcoord: 14, quantizeColor: 8, quantizeWeight: 8 }),
     meshopt({ encoder: MeshoptEncoder, level: 'high' }),
   );
   const out = path.join(dst, f);

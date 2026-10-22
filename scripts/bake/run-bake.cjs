@@ -19,7 +19,7 @@ const L = [
   { out: 'nathan', fbx: `${RP}/rp_nathan_animated_003_walking/rp_nathan_animated_003_walking.fbx`, prefix: 'rp_nathan_animated_003_walking_', clip: 'walk', inPlace: true, tex: `${RP}/small/rp_nathan_animated_003` },
   { out: 'eric', fbx: `${RP}/rp_eric_rigged_001/rp_eric_rigged_001_u3d.fbx`, tex: `${RP}/small/rp_eric_rigged_001` },
   { out: 'carla', fbx: `${RP}/rp_carla_rigged_001/rp_carla_rigged_001_u3d.fbx`, tex: `${RP}/small/rp_carla_rigged_001` },
-  { out: 'claudia', fbx: `${RP}/rp_claudia_rigged_002/rp_claudia_rigged_002_u3d.fbx`, tex: `${RP}/small/rp_claudia_rigged_002` },
+  { out: 'claudia', fbx: `${RP}/rp_claudia_rigged_002/rp_claudia_rigged_002_u3d.fbx`, tex: `${RP}/small/rp_claudia_rigged_002`, hairRects: [[180, 120, 305, 230], [575, 335, 715, 510], [795, 450, 970, 655]] },
   { out: 'manuel', fbx: `${RP}/rp_manuel_animated_001_dancing/rp_manuel_animated_001_dancing.fbx`, prefix: 'rp_manuel_animated_001_dancing_', tex: `${RP}/small/rp_manuel_animated_001` },
 ];
 const only = process.argv.slice(2);

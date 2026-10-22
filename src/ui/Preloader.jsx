@@ -1,11 +1,11 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { useProgress } from '@react-three/drei';
 import { store, subscribe } from '../store.js';
 import { Logo } from './Chrome.jsx';
 
 export default function Preloader() {
-  const { progress } = useProgress();
+  const progress = useSyncExternalStore(subscribe, () => store.loadProgress);
   const loaded = useSyncExternalStore(subscribe, () => store.loaded);
+  const failed = useSyncExternalStore(subscribe, () => store.failed);
   const [gone, setGone] = useState(false);
   useEffect(() => {
     if (!loaded) return;
@@ -16,7 +16,7 @@ export default function Preloader() {
   return (
     <div className={'preloader' + (loaded ? ' is-done' : '')} role="status" aria-live="polite">
       <Logo />
-      <p>{loaded ? 'Pronto' : `Chamando as pessoas · ${Math.round(progress)}%`}</p>
+      <p>{failed ? 'Este navegador não conseguiu abrir a cena em 3D.' : loaded ? 'Pronto' : `Chamando as pessoas · ${progress}%`}</p>
     </div>
   );
 }

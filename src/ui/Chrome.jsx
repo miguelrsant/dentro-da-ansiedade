@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { store, subscribe } from '../store.js';
-import { CHAPTERS, ACTS } from '../story.js';
+import { SCENES, ACTS } from '../v2/story.js';
 
 const useChapter = () => useSyncExternalStore(subscribe, () => store.chapter);
 
@@ -16,7 +16,8 @@ export default function Chrome({ goTo }) {
   const chapter = useChapter();
   const [menu, setMenu] = useState(false);
   const indicators = useRef([]);
-  const dark = CHAPTERS[chapter].theme === 'dark';
+  const dark = !!SCENES[chapter].dark;
+  const breathAt = SCENES.findIndex(s => s.breath);
 
   useEffect(() => {
     let raf;
@@ -54,8 +55,8 @@ export default function Chrome({ goTo }) {
       <nav id="menu" className="menu" hidden={!menu} aria-label="Capítulos">
         <p className="menu-title">Capítulos</p>
         <ol>
-          {CHAPTERS.map((ch, i) => (
-            <li key={ch.key}>
+          {SCENES.map((ch, i) => (
+            <li key={ch.id}>
               <a href="#" className={i === chapter ? 'is-active' : ''} onClick={e => { e.preventDefault(); setMenu(false); goTo(i); }}>
                 <small>{String(i + 1).padStart(2, '0')}</small>{ch.nav}
               </a>
@@ -75,11 +76,11 @@ export default function Chrome({ goTo }) {
       </nav>
       <p className="acts-mobile" aria-hidden="true"><b>{actIndex + 1}</b><span>/</span>{ACTS.length}<em>{ACTS[actIndex]?.name}</em></p>
 
-      <button type="button" className="pill pill--left" onClick={() => goTo(CHAPTERS.length - 1)}>
+      <button type="button" className="pill pill--left" onClick={() => goTo(SCENES.length - 1)}>
         <span className="pulse" aria-hidden="true"><i /><i /><i /><b /></span>
         <span>CVV · ligue 188</span>
       </button>
-      <button type="button" className="pill pill--right" onClick={() => goTo(6)}>
+      <button type="button" className="pill pill--right" onClick={() => goTo(breathAt)}>
         <span>Respirar agora</span>
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3.6" stroke="currentColor" strokeWidth="1.5" /><circle cx="12" cy="12" r="8.6" stroke="currentColor" strokeWidth="1.5" opacity=".55" /></svg>
       </button>

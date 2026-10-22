@@ -1,4 +1,4 @@
 node_modules
 dist
-dist-inline
+assets-src/props
 .DS_Store

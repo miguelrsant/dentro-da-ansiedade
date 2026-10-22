@@ -17,6 +17,7 @@ async function imgData(url) {
   const g = c.getContext('2d'); g.drawImage(im, 0, 0);
   return { w: c.width, h: c.height, d: g.getImageData(0, 0, c.width, c.height).data };
 }
+const inRects = (rects, u, v) => rects.some(([x0, y0, x1, y1]) => { const x = u * 1024, y = (1 - v) * 1024; return x >= x0 && x <= x1 && y >= y0 && y <= y1; });
 const sample = (img, u, v) => {
   u = ((u % 1) + 1) % 1; v = ((v % 1) + 1) % 1;
   const x = Math.min(img.w - 1, Math.floor(u * img.w)), y = Math.min(img.h - 1, Math.floor((1 - v) * img.h));
@@ -86,20 +87,27 @@ window.bake = async (cfg) => {
     const cloth = Math.max(sample(m1, u, v)[0], sample(m2, u, v)[0]);
     const [r, gg, b] = sample(dif, u, v);
     const mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), L = 0.299 * r + 0.587 * gg + 0.114 * b, S = mx > 0 ? (mx - mn) / mx : 0;
-    const skinLike = (r > gg && gg >= b * 0.9 && S > 0.12 && S < 0.75 && L > 0.22) ? 1 : 0;
+    let skinLike = (r > gg && gg >= b * 0.9 && S > 0.12 && S < 0.75 && L > 0.22) ? 1 : 0;
+    // light hair (claudia's blonde) passes the skin test; inside its UV islands only the lighter, redder pixels stay skin
+    let hairLike = L < 0.32;
+    if (cfg.hairRects && inRects(cfg.hairRects, u, v)) {
+      let hue = 0;
+      if (mx > mn) { hue = mx === r ? ((gg - b) / (mx - mn)) * 60 : mx === gg ? (2 + (b - r) / (mx - mn)) * 60 : (4 + (r - gg) / (mx - mn)) * 60; if (hue < 0) hue += 360; }
+      if (!skinLike || L < 0.52 || hue > 17) { skinLike = 0; hairLike = true; }
+    }
     skinRaw[i] = cloth > 0.5 ? 0 : skinLike;
-    hairRaw[i] = cloth > 0.5 ? 0 : (skinLike ? 0 : (L < 0.32 ? 1 : 0));
+    hairRaw[i] = cloth > 0.5 ? 0 : (skinLike ? 0 : (hairLike ? 1 : 0));
   }
-  // weld by position + normal (drops uv seams)
+  // weld by position + normal + uv (keeps uv seams for the detail textures)
   const map = new Map(), remap = new Uint32Array(N); let n = 0; const first = [];
   for (let i = 0; i < N; i++) {
-    const k = Math.round(pos.getX(i) * 200) + ',' + Math.round(pos.getY(i) * 200) + ',' + Math.round(pos.getZ(i) * 200) + '|' + Math.round(nor.getX(i) * 50) + ',' + Math.round(nor.getY(i) * 50) + ',' + Math.round(nor.getZ(i) * 50);
+    const k = Math.round(pos.getX(i) * 200) + ',' + Math.round(pos.getY(i) * 200) + ',' + Math.round(pos.getZ(i) * 200) + '|' + Math.round(nor.getX(i) * 50) + ',' + Math.round(nor.getY(i) * 50) + ',' + Math.round(nor.getZ(i) * 50) + '|' + Math.round(uv.getX(i) * 4096) + ',' + Math.round(uv.getY(i) * 4096);
     let id = map.get(k); if (id === undefined) { id = n++; map.set(k, id); first.push(i); }
     remap[i] = id;
   }
-  const P = new Float32Array(n * 3), NO = new Float32Array(n * 3), SI = new Uint16Array(n * 4), SW = new Float32Array(n * 4), skin = new Float32Array(n), hair = new Float32Array(n), cnt = new Float32Array(n);
+  const UV = new Float32Array(n * 2), P = new Float32Array(n * 3), NO = new Float32Array(n * 3), SI = new Uint16Array(n * 4), SW = new Float32Array(n * 4), skin = new Float32Array(n), hair = new Float32Array(n), cnt = new Float32Array(n);
   first.forEach((i, id) => {
-    P.set([pos.getX(i), pos.getY(i), pos.getZ(i)], id * 3); NO.set([nor.getX(i), nor.getY(i), nor.getZ(i)], id * 3);
+    UV.set([uv.getX(i), uv.getY(i)], id * 2); P.set([pos.getX(i), pos.getY(i), pos.getZ(i)], id * 3); NO.set([nor.getX(i), nor.getY(i), nor.getZ(i)], id * 3);
     SI.set([si.getX(i), si.getY(i), si.getZ(i), si.getW(i)], id * 4); SW.set([sw.getX(i), sw.getY(i), sw.getZ(i), sw.getW(i)], id * 4);
   });
   for (let i = 0; i < N; i++) { const id = remap[i]; skin[id] += skinRaw[i]; hair[id] += hairRaw[i]; cnt[id]++; }
@@ -107,6 +115,7 @@ window.bake = async (cfg) => {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(P, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(NO, 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(UV, 2));
   geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(SI, 4));
   geo.setAttribute('skinWeight', new THREE.BufferAttribute(SW, 4));
   geo.setIndex(Array.from(remap));

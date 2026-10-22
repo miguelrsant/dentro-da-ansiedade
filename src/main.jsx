@@ -1,10 +1,6 @@
-import * as THREE from 'three';
 import { createRoot } from 'react-dom/client';
-import './three/inlineModels.js'; // must run before App's modules start preloading
 import App from './App.jsx';
 import './styles.css';
 
-// Colours are authored as screen colours, like the reference site.
-THREE.ColorManagement.enabled = false;
-
+// three.js loads with the stage (src/v2/stage.js), so the text and the preloader paint first.
 createRoot(document.getElementById('root')).render(<App />);
