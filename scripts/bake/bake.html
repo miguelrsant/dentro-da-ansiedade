@@ -1,0 +1,208 @@
+<!doctype html><html><body style="margin:0">
+<!-- Served from the project root (see scripts/bake/run-bake.cjs), so node_modules is reachable. -->
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/","three-mesh-bvh":"/node_modules/three-mesh-bvh/src/index.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { MeshBVH } from 'three-mesh-bvh';
+
+const manager = new THREE.LoadingManager();
+manager.setURLModifier(u => /\.(jpg|png|tga)$/i.test(u) ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' : u);
+const loader = new FBXLoader(manager);
+
+async function imgData(url) {
+  const im = new Image(); im.src = url; await im.decode();
+  const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+  const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+  return { w: c.width, h: c.height, d: g.getImageData(0, 0, c.width, c.height).data };
+}
+const sample = (img, u, v) => {
+  u = ((u % 1) + 1) % 1; v = ((v % 1) + 1) % 1;
+  const x = Math.min(img.w - 1, Math.floor(u * img.w)), y = Math.min(img.h - 1, Math.floor((1 - v) * img.h));
+  const i = (y * img.w + x) * 4; return [img.d[i] / 255, img.d[i + 1] / 255, img.d[i + 2] / 255];
+};
+
+const DROP_BONE = /^(eye|eyelid|eyebrow|jaw|mouth|head_end)|_end(_[lr])?$/;
+function cleanClip(clip, prefix, name) {
+  clip.name = name;
+  const keep = [];
+  for (const t of clip.tracks) {
+    if (prefix) t.name = t.name.split(prefix).join('');
+    const [bone, prop] = t.name.split('.');
+    if (DROP_BONE.test(bone)) continue;
+    if (prop === 'scale') continue;
+    if (prop === 'position' && bone !== 'hip') continue;
+    keep.push(t);
+  }
+  clip.tracks = keep;
+  return clip;
+}
+function trackDrift(clip, bone) {
+  const t = clip.tracks.find(t => t.name === bone + '.position'); if (!t) return null;
+  const v = t.values, n = v.length / 3;
+  return { start: [v[0], v[1], v[2]].map(x => +x.toFixed(1)), end: [v[(n - 1) * 3], v[(n - 1) * 3 + 1], v[(n - 1) * 3 + 2]].map(x => +x.toFixed(1)), dur: clip.duration };
+}
+function makeInPlace(clip) {
+  const t = clip.tracks.find(t => t.name === 'hip.position'); if (!t) return 0;
+  const v = t.values, n = v.length / 3, T = t.times[n - 1] - t.times[0];
+  const dx = v[(n - 1) * 3] - v[0], dz = v[(n - 1) * 3 + 2] - v[2];
+  for (let k = 0; k < n; k++) { const f = (t.times[k] - t.times[0]) / T; v[k * 3] -= dx * f; v[k * 3 + 2] -= dz * f; }
+  return Math.hypot(dx, dz) / T; // cm per second
+}
+
+// fixed hemisphere sample sets
+function hemi(n, seed) {
+  const out = []; let s = seed;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < n; i++) { const u = (i + rnd()) / n, a = rnd() * Math.PI * 2, r = Math.sqrt(u); out.push(new THREE.Vector3(r * Math.cos(a), r * Math.sin(a), Math.sqrt(1 - u))); }
+  return out;
+}
+const AO_DIRS = hemi(128, 7);
+const SKY_DIRS = (() => { const o = []; for (let i = 0; i < 40; i++) { const a = i * 2.39996, r = 0.55 * Math.sqrt((i + .5) / 40); o.push(new THREE.Vector3(r * Math.cos(a), 1, r * Math.sin(a)).normalize()); } return o; })();
+
+let idleClip = null;
+
+window.bake = async (cfg) => {
+  const obj = await loader.loadAsync(cfg.fbx);
+  let mesh; obj.traverse(o => { if (o.isSkinnedMesh) mesh = o; });
+  if (cfg.prefix) obj.traverse(o => { if (o.name.startsWith(cfg.prefix)) o.name = o.name.slice(cfg.prefix.length); });
+  const info = { name: cfg.out };
+  let clip = null;
+  if (cfg.clip) {
+    clip = cleanClip(obj.animations[0], cfg.prefix, cfg.clip);
+    info.hipDrift = trackDrift(clip, 'hip');
+    if (cfg.inPlace) info.speedCmPerS = +makeInPlace(clip).toFixed(2);
+    info.clipTracks = clip.tracks.length; info.clipDur = clip.duration;
+    if (cfg.clip === 'idle') idleClip = clip;
+  }
+  // classify skin / hair per raw vertex from the diffuse + clothing masks
+  const dif = await imgData(cfg.tex + '_dif.png'), m1 = await imgData(cfg.tex + '_mask01.png'), m2 = await imgData(cfg.tex + '_mask02.png');
+  const g = mesh.geometry, pos = g.attributes.position, nor = g.attributes.normal, uv = g.attributes.uv, si = g.attributes.skinIndex, sw = g.attributes.skinWeight;
+  const N = pos.count;
+  const skinRaw = new Float32Array(N), hairRaw = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const u = uv.getX(i), v = uv.getY(i);
+    const cloth = Math.max(sample(m1, u, v)[0], sample(m2, u, v)[0]);
+    const [r, gg, b] = sample(dif, u, v);
+    const mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), L = 0.299 * r + 0.587 * gg + 0.114 * b, S = mx > 0 ? (mx - mn) / mx : 0;
+    const skinLike = (r > gg && gg >= b * 0.9 && S > 0.12 && S < 0.75 && L > 0.22) ? 1 : 0;
+    skinRaw[i] = cloth > 0.5 ? 0 : skinLike;
+    hairRaw[i] = cloth > 0.5 ? 0 : (skinLike ? 0 : (L < 0.32 ? 1 : 0));
+  }
+  // weld by position + normal (drops uv seams)
+  const map = new Map(), remap = new Uint32Array(N); let n = 0; const first = [];
+  for (let i = 0; i < N; i++) {
+    const k = Math.round(pos.getX(i) * 200) + ',' + Math.round(pos.getY(i) * 200) + ',' + Math.round(pos.getZ(i) * 200) + '|' + Math.round(nor.getX(i) * 50) + ',' + Math.round(nor.getY(i) * 50) + ',' + Math.round(nor.getZ(i) * 50);
+    let id = map.get(k); if (id === undefined) { id = n++; map.set(k, id); first.push(i); }
+    remap[i] = id;
+  }
+  const P = new Float32Array(n * 3), NO = new Float32Array(n * 3), SI = new Uint16Array(n * 4), SW = new Float32Array(n * 4), skin = new Float32Array(n), hair = new Float32Array(n), cnt = new Float32Array(n);
+  first.forEach((i, id) => {
+    P.set([pos.getX(i), pos.getY(i), pos.getZ(i)], id * 3); NO.set([nor.getX(i), nor.getY(i), nor.getZ(i)], id * 3);
+    SI.set([si.getX(i), si.getY(i), si.getZ(i), si.getW(i)], id * 4); SW.set([sw.getX(i), sw.getY(i), sw.getZ(i), sw.getW(i)], id * 4);
+  });
+  for (let i = 0; i < N; i++) { const id = remap[i]; skin[id] += skinRaw[i]; hair[id] += hairRaw[i]; cnt[id]++; }
+  for (let id = 0; id < n; id++) { skin[id] /= cnt[id]; hair[id] /= cnt[id]; }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(NO, 3));
+  geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(SI, 4));
+  geo.setAttribute('skinWeight', new THREE.BufferAttribute(SW, 4));
+  geo.setIndex(Array.from(remap));
+  info.rawVerts = N; info.verts = n; info.tris = N / 3;
+
+  const sk = new THREE.SkinnedMesh(geo, new THREE.MeshStandardMaterial({ name: 'person', vertexColors: true }));
+  sk.name = 'person';
+  mesh.parent.add(sk); sk.position.copy(mesh.position); sk.quaternion.copy(mesh.quaternion); sk.scale.copy(mesh.scale);
+  sk.bind(mesh.skeleton, mesh.bindMatrix);
+  mesh.parent.remove(mesh);
+
+  // pose with the idle clip for AO (arms down)
+  const hipBone = mesh.skeleton.bones.find(b => b.name === 'hip');
+  info.hipRest = hipBone.position.toArray().map(v => +v.toFixed(2));
+  const mixer = new THREE.AnimationMixer(obj);
+  const poseClip = idleClip;
+  if (poseClip) { const a = mixer.clipAction(poseClip); a.play(); mixer.setTime(cfg.poseTime ?? 4); }
+  obj.updateMatrixWorld(true); mesh.skeleton.update();
+  const posed = new Float32Array(n * 3), tv = new THREE.Vector3();
+  for (let i = 0; i < n; i++) { sk.getVertexPosition(i, tv); posed.set([tv.x, tv.y, tv.z], i * 3); }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(posed, 3)); pg.setIndex(geo.index.clone()); pg.computeVertexNormals();
+  // the skinned mesh may carry its own transform; posed positions are in mesh space. bring to object space for ground plane.
+  const bvh = new MeshBVH(pg);
+  let minY = Infinity, maxY = -Infinity; for (let i = 0; i < n; i++) { minY = Math.min(minY, posed[i * 3 + 1]); maxY = Math.max(maxY, posed[i * 3 + 1]); }
+  info.posedMinY = +minY.toFixed(1); info.posedMaxY = +maxY.toFixed(1);
+  const R1 = 30, R2 = 110, ray = new THREE.Ray(), q = new THREE.Quaternion(), Z = new THREE.Vector3(0, 0, 1), nn = new THREE.Vector3(), dir = new THREE.Vector3(), o = new THREE.Vector3();
+  const pn = pg.attributes.normal, colors = new Float32Array(n * 4);
+  // bones that should never read as skin (shoes) and the head bone for face/hair split
+  const boneNames = mesh.skeleton.bones.map(b => b.name);
+  const isFoot = boneNames.map(nm => /^(foot|ball|lowerleg)/.test(nm));
+  const headIdx = boneNames.indexOf('head');
+  const t0 = performance.now();
+  for (let i = 0; i < n; i++) {
+    nn.fromBufferAttribute(pn, i).normalize(); o.fromArray(posed, i * 3).addScaledVector(nn, 0.15);
+    q.setFromUnitVectors(Z, nn);
+    const spin = new THREE.Quaternion().setFromAxisAngle(nn, (i * 2.39996) % (Math.PI * 2));
+    let occ1 = 0, occ2 = 0;
+    for (const d0 of AO_DIRS) {
+      dir.copy(d0).applyQuaternion(q).applyQuaternion(spin);
+      ray.set(o, dir);
+      let hitD = Infinity;
+      const h = bvh.raycastFirst(ray, THREE.DoubleSide); if (h) hitD = h.distance;
+      if (dir.y < -1e-3) { const gd = (o.y - minY) / -dir.y; if (gd < hitD) hitD = gd; }
+      if (hitD < R1) occ1 += 1 - hitD / R1;
+      if (hitD < R2) occ2 += 1 - hitD / R2;
+    }
+    // dominant bone
+    let bi = 0, bw = -1; for (let k = 0; k < 4; k++) { const w = SW[i * 4 + k]; if (w > bw) { bw = w; bi = SI[i * 4 + k]; } }
+    let sk2 = skin[i], hr = hair[i];
+    if (isFoot[bi]) { sk2 = 0; hr = 0; }
+    colors.set([1 - occ1 / AO_DIRS.length, 1 - occ2 / AO_DIRS.length, sk2, hr], i * 4);
+  }
+  info.bakeMs = Math.round(performance.now() - t0);
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+  mixer.stopAllAction(); mixer.uncacheRoot(obj); mesh.skeleton.pose(); obj.updateMatrixWorld(true);
+
+  obj.scale.setScalar(0.01);
+  // remove anything that is not the skeleton or the person mesh
+  const extra = []; obj.traverse(o => { if (o !== obj && !o.isBone && o !== sk && !o.children.some(c => c.isBone) && !(o.isObject3D && o.type === 'Object3D' && o.children.length)) extra.push(o); });
+  extra.filter(o => o.isMesh && o !== sk).forEach(o => o.parent.remove(o));
+  obj.name = cfg.out;
+  window.__last = { obj, sk, clip, posedGeo: pg };
+  const glb = await new GLTFExporter().parseAsync(obj, { binary: true, animations: clip ? [clip] : [], onlyVisible: false });
+  const bytes = new Uint8Array(glb);
+  let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  info.glbBytes = bytes.length;
+  return { info, b64: btoa(s) };
+};
+
+// debug: render the posed geometry with baked colors
+window.preview = (mode) => {
+  const { posedGeo, sk } = window.__last;
+  const g = posedGeo.clone(); g.setAttribute('color', sk.geometry.attributes.color);
+  const mat = new THREE.ShaderMaterial({
+    vertexColors: true, uniforms: { mode: { value: mode } },
+    vertexShader: 'varying vec4 vC; varying vec3 vN; varying vec3 vV; void main(){ vC = color; vN = normalize(normalMatrix*normal); vec4 mv = modelViewMatrix*vec4(position,1.); vV = -mv.xyz; gl_Position = projectionMatrix*mv; }',
+    fragmentShader: `uniform int mode; varying vec4 vC; varying vec3 vN; varying vec3 vV;
+      void main(){ vec3 cDark = vec3(0.196,0.212,0.659); vec3 cBright = vec3(0.431,0.655,1.0); vec3 cF = vec3(0.898,0.278,0.804);
+        float ao = clamp(vC.r*0.5 + vC.g*0.5, 0., 1.); ao = ao*ao; float fr = 1. - abs(dot(normalize(vN), normalize(vV)));
+        vec3 col = mix(cDark, cBright, ao); col += cF*fr*(0.35+ao*0.65)*(0.5+smoothstep(0.25,1.25,fr)*2.*ao);
+        if (mode==1) col = vec3(vC.r); if (mode==2) col = vec3(vC.b, vC.a, 0.);
+        gl_FragColor = vec4(col,1.); }`,
+  });
+  mat.defines = { };
+  const m = new THREE.Mesh(g, mat);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color('#8f8ad1'); scene.add(m);
+  const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setSize(900, 700);
+  r.outputColorSpace = THREE.LinearSRGBColorSpace;
+  const out = [];
+  for (const ang of [0, Math.PI * 0.75]) {
+    const cam = new THREE.PerspectiveCamera(30, 900 / 700, 1, 5000);
+    cam.position.set(Math.sin(ang) * 420, 110, Math.cos(ang) * 420); cam.lookAt(0, 90, 0);
+    r.render(scene, cam); out.push(r.domElement.toDataURL('image/png'));
+  }
+  r.dispose();
+  return out;
+};
+window.ready = true;
+</script></body></html>
