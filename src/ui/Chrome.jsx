@@ -1,8 +1,39 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { store, subscribe } from '../store.js';
 import { SCENES, ACTS } from '../v2/story.js';
+import { toggleSound } from '../audio/heart.js';
 
 const useChapter = () => useSyncExternalStore(subscribe, () => store.chapter);
+const useSound = () => useSyncExternalStore(subscribe, () => store.sound);
+
+// The heartbeat's sound switch: a speaker whose waves beat with the heart while it plays, with "Ativar som"
+// beside it until the first click or tap lets the browser start the sound.
+function SoundButton() {
+  const sound = useSound();
+  const waves = useRef();
+  useEffect(() => {
+    if (sound !== 'on') return;
+    let raf;
+    const loop = () => {
+      if (waves.current) waves.current.style.opacity = (0.45 + 0.55 * store.pulse * Math.min(1, 0.3 + store.anx)).toFixed(3);
+      raf = requestAnimationFrame(loop);
+    };
+    loop();
+    return () => cancelAnimationFrame(raf);
+  }, [sound]);
+  const label = sound === 'on' ? 'Desativar o som' : 'Ativar o som';
+  return (
+    <button type="button" className={'sound-btn is-' + sound} aria-label={label} title={label} onClick={toggleSound}>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3.5 9.4h3.3l4.7-3.9v13l-4.7-3.9H3.5z" fill="currentColor" />
+        {sound === 'off'
+          ? <path d="M15.4 9.6l4.8 4.8m0-4.8l-4.8 4.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          : <g ref={waves} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M14.8 9.3a3.9 3.9 0 0 1 0 5.4" /><path d="M17.5 6.7a7.6 7.6 0 0 1 0 10.6" /></g>}
+      </svg>
+      {sound === 'armed' && <span>Ativar som</span>}
+    </button>
+  );
+}
 
 export function Logo() {
   return (
@@ -49,6 +80,7 @@ export default function Chrome({ goTo }) {
         <span>Respira</span>
       </a>
 
+      <SoundButton />
       <button className={'menu-btn' + (menu ? ' is-open' : '')} type="button" aria-expanded={menu} aria-controls="menu" aria-label={menu ? 'Fechar menu' : 'Abrir menu'} onClick={() => setMenu(m => !m)}>
         <i /><i />
       </button>

@@ -20,7 +20,9 @@ O `vite.config.js` usa `base: './'`, então a pasta `dist/` funciona em qualquer
 - O React desenha só a camada de texto (`src/ui/`): títulos, conversas, notificações, números, a respiração guiada e os cartões de ajuda. A rolagem vira um número de cena (`store.progress`, de 0 a 15).
 - O palco 3D (`src/v2/`) roda fora do React. `stage.js` monta cada cena uma vez, em segundo plano e na ordem da história, mostra a cena em que o leitor está, move a câmera dela conforme a rolagem e passa por uma cortina na cor da paleta entre uma cena e outra.
 - Em telas largas a imagem desliza para a direita para abrir espaço para a coluna de texto; em telas em pé ela desce. O desfoque acompanha a câmera, e em máquinas lentas a resolução cai aos poucos.
-- `window.__dda` expõe o estado e quantas cenas já estão prontas, para testes e para a gravação de vídeo.
+- O coração do protagonista bate o tempo todo, no ritmo de cada cena (`bpm`), e cada cena diz o quanto ele está ansioso (`anx`, de 0 a 1). Quanto mais ansioso, mais as bordas da tela pulsam em vermelho a cada batida, a imagem dá um leve empurrão para a frente e o "tum-tum" soa mais alto. O som é feito na hora com Web Audio (`src/audio/heart.js`) e cai exatamente nas batidas que a tela mostra.
+- O navegador só deixa tocar som depois de um clique, toque ou tecla: o som liga sozinho no primeiro deles, e o botão ao lado do menu liga e desliga (a escolha fica guardada no navegador). Com `prefers-reduced-motion`, a tela não pulsa nem dá o empurrão, só fica tingida.
+- `window.__dda` expõe o estado, quantas cenas já estão prontas e as batidas contadas, para testes e para a gravação de vídeo.
 
 ## Onde mexer
 
@@ -28,7 +30,8 @@ O `vite.config.js` usa `base: './'`, então a pasta `dist/` funciona em qualquer
 | --- | --- |
 | Roteiro: lugar, hora, textos, conversas e movimento de câmera de cada cena | `src/v2/story.js` |
 | Cenários: objetos, pessoas, poses, paleta, brilho e enquadramento de cada cena | `src/v2/scenes.js` |
-| Movimentos de câmera, cortina entre cenas, coração e respiração no brilho do protagonista | `src/v2/stage.js` |
+| Movimentos de câmera, cortina entre cenas, coração na tela e respiração no brilho do protagonista | `src/v2/stage.js` |
+| Som do coração e botão de som | `src/audio/heart.js`, `src/ui/Chrome.jsx` |
 | Renderizador, efeitos (AO, desfoque, bloom, vinheta, granulado) e carregamento das pessoas | `src/v2/engine.js` |
 | Paletas das cenas | `src/story.js` |
 | Camada de texto | `src/ui/Overlay.jsx`, `src/ui/Chrome.jsx`, `src/styles.css` |

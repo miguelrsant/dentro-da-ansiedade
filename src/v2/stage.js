@@ -4,6 +4,7 @@ import * as builders from './scenes.js';
 import { SCENES } from './story.js';
 import { PALETTES } from '../story.js';
 import { store, emit } from '../store.js';
+import { heartbeat } from '../audio/heart.js';
 
 // Runs the 3D side of the scroll story: builds each scene once (in order, in the background), shows the
 // one the reader is on, moves its camera with the scroll and dips to the stage colour between scenes.
@@ -85,8 +86,15 @@ function cameraAt(r, move, u, portrait, lift = 0) {
 const camera = E.camera;
 const veilColor = new THREE.Color(), tmpColor = new THREE.Color();
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+// One heartbeat on screen over the beat's phase (0..1): a quick rise on the beat and a slower fall, and the
+// lighter second sound a quarter beat later; at fast rates the beat before is still fading.
+const hit = t => (t < 0 ? 0 : t < 0.05 ? t / 0.05 : Math.exp(-(t - 0.05) / 0.16));
+function heartEnv(ph, per) {
+  const lub = hit(ph * per) + hit((ph + 1) * per), dub = hit((ph - 0.25) * per) + hit((ph + 0.75) * per);
+  return Math.min(1, (lub + 0.55 * dub) / 1.2);
+}
 
-export async function createStage({ canvas, veil, mobile }) {
+export async function createStage({ canvas, veil, flush, mobile }) {
   E.createRenderer(canvas, { mobile });
   E.setSize(canvas.clientWidth, canvas.clientHeight);
   // resizing clears the canvas, so it happens inside the frame that draws it again (no flash of the page colour)
@@ -105,9 +113,9 @@ export async function createStage({ canvas, veil, mobile }) {
 
   let shown = -1, last = performance.now(), slow = 0, ratio = 1, sideNow = 0, downNow = 0;
   let beat = 0, breathFrom = 0; // heartbeats counted so far; when the breathing scene came on
-  // for tests and the video capture: the shared state, how many scenes are built, and a switch that keeps
-  // the resolution fixed
-  const dda = window.__dda = { store, built: () => recs.filter(Boolean).length, fixedResolution: false };
+  // for tests and the video capture: the shared state, how many scenes are built, a switch that keeps the
+  // resolution fixed and the heartbeats counted
+  const dda = window.__dda = { store, built: () => recs.filter(Boolean).length, fixedResolution: false, beat: () => beat };
   const head = new THREE.Vector3();
   const tick = now => {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
@@ -125,6 +133,16 @@ export async function createStage({ canvas, veil, mobile }) {
     if (r) {
       if (shown !== i) { E.show(r); shown = i; breathFrom = now / 1000; }
       const s = SCENES[i];
+      // his heart: the rate and how anxious he is ease toward the scene's, and the beats are counted
+      store.bpm += (s.bpm - store.bpm) * (1 - Math.exp(-dt * 1.5));
+      store.anx += (s.anx - store.anx) * (1 - Math.exp(-dt * 1.2));
+      beat += dt * store.bpm / 60;
+      const env = heartEnv(beat % 1, 60 / store.bpm);
+      store.pulse = env;
+      heartbeat(beat, store.bpm, store.anx);
+      // the screen flushes at the edges and the picture pushes in on every beat, only when he is anxious
+      const flushK = sstep(0.15, 1, store.anx);
+      flush.style.opacity = (flushK * (store.reducedMotion ? 0.45 : 0.25 + 0.75 * env)).toFixed(3);
       const u = Math.min(1, Math.max(0, p - i + 0.5));
       const portrait = camera.aspect < 0.9;
       const cam = cameraAt(r, s.move, u, portrait, s.lift);
@@ -139,17 +157,16 @@ export async function createStage({ canvas, veil, mobile }) {
       downNow += (down - downNow) * glide;
       if (Math.abs(sideNow) > 0.002 || downNow > 0.002) camera.setViewOffset(W, H, -sideNow * W, -downNow * H, W, H);
       else camera.clearViewOffset();
-      if (camera.fov !== cam.fov) camera.fov = cam.fov;
+      const fov = store.reducedMotion ? cam.fov : cam.fov * (1 - 0.015 * flushK * env);
+      if (camera.fov !== fov) camera.fov = fov;
       camera.updateProjectionMatrix();
       camera.lookAt(cam.tgt);
       camera.updateMatrixWorld();
       E.setFocus(cam.focus, cam.range, cam.bokeh);
 
       // heart and breath on the protagonist's glow
-      store.bpm += (s.bpm - store.bpm) * (1 - Math.exp(-dt * 1.5));
-      beat += dt * store.bpm / 60;
       let k = 1;
-      if (s.pulse) { const ph = beat % 1; k = 0.8 + 0.5 * Math.exp(-ph * 10) + (ph > 0.25 ? 0.3 * Math.exp(-(ph - 0.25) * 10) : 0); }
+      if (s.pulse) k = 0.8 + 0.55 * env;
       if (s.breath) { // the cycle starts with a breath in when the scene comes on
         const c = (now / 1000 - breathFrom) % 14, inh = c < 4, hold = c >= 4 && c < 8;
         const b = inh ? c / 4 : hold ? 1 : 1 - (c - 8) / 6;

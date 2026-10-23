@@ -138,7 +138,10 @@ export default function Overlay() {
         el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
         el.classList.toggle('is-on', on);
       });
-      if (bpmRef.current) bpmRef.current.textContent = Math.round(store.bpm);
+      if (bpmRef.current) {
+        bpmRef.current.textContent = Math.round(store.bpm);
+        if (!store.reducedMotion) bpmRef.current.style.transform = `scale(${(1 + 0.04 * store.pulse).toFixed(4)})`;
+      }
       const br = breathRefs.current;
       if (br.fill) {
         br.fill.style.transform = `scale(${(0.5 + 0.5 * store.breath.s).toFixed(3)})`;

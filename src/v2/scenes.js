@@ -65,13 +65,51 @@ function windowPane(g, { pos, w = 1.2, h = 1.3, face = 'z', glow = 0.18, bars = 
   for (let i = 1; i <= bars; i++) box(wg, [0.04, h, 0.06], { pos: [-w / 2 + (w * i) / (bars + 1), 0, 0.02], r: 0.01, tone: 0.08 });
   box(wg, [w + 0.2, 0.04, 0.2], { pos: [0, -0.06, 0.08], r: 0.01, tone: 0.06 });
 }
-function bed(g, { w = 1.6, l = 2.05, duvet = 0.6, duvetTop = 0.78 } = {}) {
+function bed(g, { w = 1.6, l = 2.05, duvet = 0.6, duvetTop = 0.78, pillows = true } = {}) {
   box(g, [w + 0.06, 0.3, l], { pos: [0, 0.06, 0], r: 0.03, tone: -0.08 });
   box(g, [w - 0.04, 0.16, l - 0.06], { pos: [0, 0.34, 0.02], r: 0.07, tone: 0.1 });
   box(g, [w + 0.1, 1.05, 0.09], { pos: [0, 0, -l / 2 - 0.02], r: 0.04, tone: -0.04 });
-  box(g, [w * 0.4, 0.13, 0.42], { pos: [-w * 0.23, 0.48, -l / 2 + 0.28], r: 0.06, tone: 0.16 });
-  box(g, [w * 0.4, 0.13, 0.42], { pos: [w * 0.23, 0.48, -l / 2 + 0.28], r: 0.06, tone: 0.16 });
+  if (pillows) {
+    box(g, [w * 0.4, 0.13, 0.42], { pos: [-w * 0.23, 0.48, -l / 2 + 0.28], r: 0.06, tone: 0.16 });
+    box(g, [w * 0.4, 0.13, 0.42], { pos: [w * 0.23, 0.48, -l / 2 + 0.28], r: 0.06, tone: 0.16 });
+  }
   if (duvet) box(g, [w + 0.04, duvetTop - 0.4, l * duvet], { pos: [0, 0.4, l / 2 - l * duvet / 2 + 0.04], r: 0.1, tone: 0.06 });
+}
+// A soft pillow (world position, axis-aligned): a puffy height field over its footprint, w × d, on a base
+// at y0 and h tall in the middle. Body points over it press it down: the cloth stays under each of them
+// and eases back up in a smooth bowl, never thinner than `min`, so a head rests in it instead of passing through.
+function pillow({ cx, cz, w = 0.64, d = 0.42, y0 = 0.49, h = 0.13, press = [], min = 0.035, give = 7, tone = 0.16, cell = 0.01 }) {
+  const nx = Math.round(w / cell) + 1, nz = Math.round(d / cell) + 1, x0 = cx - w / 2, z0 = cz - d / 2;
+  // flat on top, rounding down to the base along every edge
+  const prof = u => Math.pow(Math.max(0, 1 - Math.pow(Math.abs(2 * u - 1), 5)), 0.32);
+  const H = new Float32Array(nx * nz);
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) H[j * nx + i] = y0 + h * prof(i / (nx - 1)) * prof(j / (nz - 1));
+  const low = new Float32Array(nx * nz).fill(Infinity);
+  for (const v of press) {
+    const i = Math.round((v.x - x0) / cell), j = Math.round((v.z - z0) / cell);
+    if (i >= 0 && j >= 0 && i < nx && j < nz && v.y < H[j * nx + i] + 0.05) low[j * nx + i] = Math.min(low[j * nx + i], v.y - 0.004);
+  }
+  // the dent: under a pressed cell at height l, the cloth can rise no faster than give·r² around it
+  const R = Math.ceil(0.12 / cell), D = new Float32Array(H);
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+    const l = low[j * nx + i]; if (l === Infinity) continue;
+    for (let dj = -R; dj <= R; dj++) for (let di = -R; di <= R; di++) {
+      const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= nx || jj >= nz) continue;
+      const v = l + give * ((di * cell) ** 2 + (dj * cell) ** 2);
+      if (v < D[jj * nx + ii]) D[jj * nx + ii] = v;
+    }
+  }
+  for (let k = 0; k < D.length; k++) D[k] = Math.max(D[k], Math.min(H[k], y0 + min));
+  const pos = [], idx = [];
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) pos.push(x0 + i * cell, D[j * nx + i], z0 + j * cell);
+  for (let j = 0; j < nz - 1; j++) for (let i = 0; i < nx - 1; i++) {
+    const a = j * nx + i, b = a + 1, c = a + nx, e = c + 1;
+    idx.push(a, c, b, b, c, e);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  return add(new THREE.Mesh(geo, propMaterial(shared, { tone, side: THREE.DoubleSide })));
 }
 // World positions of a posed person's skinned vertices, each with the name of its strongest bone.
 function bodyPoints(p) {
@@ -236,7 +274,7 @@ function bedroom({ duvet = 0.6, duvetTop = 0.8, glow = 0.22 } = {}) {
   const g = group();
   room(g, { w: 4.8, d: 4.4, walls: ['back', 'left'] });
   windowPane(g, { pos: [-2.39, 0.95, -0.6], w: 1.3, h: 1.35, face: 'x', glow });
-  bed(group([0.1, 0, -1.15], 0, g), { duvet, duvetTop });
+  bed(group([0.1, 0, -1.15], 0, g), { duvet, duvetTop, pillows: false });
   P(g, 'painted_wooden_nightstand', { pos: [-1.0, 0, -1.95] });
   P(g, 'painted_wooden_nightstand', { pos: [1.2, 0, -1.95] });
   P(g, 'alarm_clock_01', { pos: [-1.05, 0.62, -1.9], rot: 25 });
@@ -247,10 +285,17 @@ function bedroom({ duvet = 0.6, duvetTop = 0.8, glow = 0.22 } = {}) {
   box(g, [2.4, 0.012, 1.5], { pos: [0.1, 0, 0.55], r: 0.006, tone: 0.12 });
   return g;
 }
+// the two pillows of his bed, pressed by whoever lies on them
+function bedPillows(p = null) {
+  const pts = p ? bodyPoints(p).map(o => o.v) : [];
+  pillow({ cx: -0.268, cz: -1.895, press: pts });
+  pillow({ cx: 0.468, cz: -1.895, press: pts });
+}
 export async function s01() {
   await begin('dawn', BEDROOM_PROPS);
   bedroom({ duvet: 0 });
-  const hero = person(HERO, { pose: 'lieBack', pos: [-0.27, 0.5, -1.25] });
+  const hero = person(HERO, { pose: 'lieBack', pos: [-0.27, 0.5, -1.17] });
+  bedPillows(hero);
   duvet(under(hero, -1.5, /(arm|hand|thumb|index|middle|ring|pinky)/), MATTRESS);
   phone(V3(-0.92, 0.633, -1.78), V3(-0.92, 2, -1.7), { glow: 0.45 });
   const cam = V3(0.95, 1.9, -0.05);
@@ -262,6 +307,7 @@ export async function s02() {
   // he sits on the bare edge of the mattress; the duvet he threw off lies rumpled on the far side
   duvet(rumple({ x0: -0.1, x1: 0.78, z0: -1.52, z1: -0.25, seed: 4 }), { ...MATTRESS, x0: -0.2, z0: -1.6 });
   const hero = person(HERO, { pose: seated('sitPhone', 0.535), pos: [-0.52, 0, -0.85], heading: -90 * D2R });
+  bedPillows();
   const l = boneAt(hero, 'hand_l'), r = boneAt(hero, 'hand_r');
   const mid = l.clone().add(r).multiplyScalar(0.5);
   const head = boneAt(hero, 'head', [0, 0.06, 0.08]);
@@ -274,6 +320,7 @@ export async function s11() {
   await begin('night', BEDROOM_PROPS, 'night');
   bedroom({ duvet: 0, glow: 0.04 });
   const hero = person(HERO, { pose: 'lieSide', pos: [-0.06, 0.5, -1.22] });
+  bedPillows(hero);
   duvet(under(hero, -1.3, /(arm|hand|thumb|index|middle|ring|pinky)/), { ...MATTRESS, z0: -1.3 });
   const l = boneAt(hero, 'hand_l'), r = boneAt(hero, 'hand_r');
   const mid = l.clone().add(r).multiplyScalar(0.5);
@@ -412,7 +459,8 @@ export async function s05() {
   }
   for (let i = 0; i < 6; i++) solid(g, cyl(0.022, H, 12), { pos: [0, H / 2, 1.2 - i * 2.4], tone: 0.25 });
   // he holds the pole, eyes down; others seated and standing
-  const hero = person(HERO, { pose: 'pole', pos: [-0.105, 0, -1.23], heading: 12 * D2R });
+  // the pole at x = 0, z = -1.2 stands in front of him at his left
+  const hero = person(HERO, { pose: 'poleHold', pos: [-0.24, 0, -1.46], heading: 12 * D2R });
   const seatsL = [['claudia', 'sitPhone', 1.0], ['sophia', 'sit', -1.75], ['eric', 'sitPhone', -3.8], ['manuel', 'sit', -6.2]];
   const seatsR = [['carla', 'sitPhone', -0.4], ['manuel', 'sitPhone', -2.6], ['sophia', 'sitPhone', -4.4], ['claudia', 'sit', -6.6]];
   for (const [n, p, z] of seatsL) person(n, { pose: seated(p, 0.44), pos: [-W / 2 + 0.3, 0, z], heading: 90 * D2R });
@@ -422,7 +470,7 @@ export async function s05() {
   person('claudia', { pose: 'crossed', pos: [-0.35, 0, -5.2], heading: 30 * D2R });
   statue('mei', { pos: [0.4, 0, -6.4], heading: 200 * D2R });
   glowOn(HERO, heart(hero), 0.55, 0.13, '#ffc4e6');
-  shoot({ pos: [0.6, 1.62, 3.4], target: [-0.1, 1.2, -2.2], fov: 38, focus: 4.7, range: 1.2, bokeh: 4 });
+  shoot({ pos: [0.6, 1.62, 3.4], target: [-0.1, 1.2, -2.2], fov: 38, focus: 4.9, range: 1.2, bokeh: 4 });
 }
 
 // 6-7. Open office; the message from the boss.

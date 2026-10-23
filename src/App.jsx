@@ -9,10 +9,10 @@ const SEG = 1.25; // screen heights of scrolling per scene
 const isMobile = () => matchMedia('(max-width: 760px), (pointer: coarse)').matches;
 
 function Stage({ mobile }) {
-  const canvas = useRef(), veil = useRef();
+  const canvas = useRef(), veil = useRef(), flush = useRef();
   useEffect(() => {
     let stop = () => {}, alive = true;
-    import('./v2/stage.js').then(({ createStage }) => createStage({ canvas: canvas.current, veil: veil.current, mobile }))
+    import('./v2/stage.js').then(({ createStage }) => createStage({ canvas: canvas.current, veil: veil.current, flush: flush.current, mobile }))
       .then(s => { if (alive) stop = s; else s(); })
       .catch(e => { console.error(e); store.failed = true; emit(); });
     return () => { alive = false; stop(); };
@@ -21,6 +21,7 @@ function Stage({ mobile }) {
     <div className="stage" aria-hidden="true">
       <canvas ref={canvas} />
       <div ref={veil} className="veil" />
+      <div ref={flush} className="flush" />
     </div>
   );
 }
