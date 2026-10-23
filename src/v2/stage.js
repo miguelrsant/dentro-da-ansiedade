@@ -114,8 +114,9 @@ export async function createStage({ canvas, veil, flush, mobile }) {
   let shown = -1, last = performance.now(), slow = 0, ratio = 1, sideNow = 0, downNow = 0;
   let beat = 0, breathFrom = 0; // heartbeats counted so far; when the breathing scene came on
   // for tests and the video capture: the shared state, how many scenes are built, a switch that keeps the
-  // resolution fixed and the heartbeats counted
-  const dda = window.__dda = { store, built: () => recs.filter(Boolean).length, fixedResolution: false, beat: () => beat };
+  // resolution fixed, one that runs frames without drawing them (to start a capture mid-story with the heart
+  // on the same beat) and the heartbeats counted
+  const dda = window.__dda = { store, built: () => recs.filter(Boolean).length, fixedResolution: false, skipRender: false, beat: () => beat };
   const head = new THREE.Vector3();
   const tick = now => {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
@@ -187,7 +188,7 @@ export async function createStage({ canvas, veil, flush, mobile }) {
     veil.style.opacity = fade.toFixed(3);
     if (fade > 0.001) veil.style.background = '#' + veilColor.set(PALETTES[SCENES[a].pal].near).lerp(tmpColor.set(PALETTES[SCENES[b].pal].near), sstep(0.35, 0.65, f)).getHexString();
 
-    if (fade < 0.999 || cleared) E.renderFrame(dt);
+    if ((fade < 0.999 || cleared) && !dda.skipRender) E.renderFrame(dt);
     raf = requestAnimationFrame(tick);
   };
   let raf = requestAnimationFrame(tick);
