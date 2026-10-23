@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as E from './engine.js';
+import * as M from './motion.js';
 import * as builders from './scenes.js';
 import { SCENES } from './story.js';
 import { PALETTES } from '../story.js';
@@ -24,6 +25,7 @@ function ensure(i) {
       r.group.updateMatrixWorld(true);
       r.head = r.hero ? E.boneAt(r.hero, 'head', [0, 0.06, 0.06]) : null;
       r.heart = r.hero ? E.boneAt(r.hero, 'spine_03', [0.03, -0.04, 0.1]) : null;
+      r.motion = M.attach(r);
       recs[i] = r;
       return r;
     });
@@ -95,7 +97,8 @@ export async function createStage({ canvas, veil, mobile }) {
   addEventListener('resize', resize);
 
   E.onProgress(f => { store.loadProgress = Math.round(f * 70); emit(); });
-  await Promise.all([E.loadPeople(!mobile), E.loadPoses()]);
+  await Promise.all([E.loadPeople(!mobile), E.loadPoses(), M.loadMotion()]);
+  M.prepareWalk();
   store.loadProgress = 80; emit();
   const start = Math.min(N - 1, Math.max(0, Math.round(store.progress)));
   await ensure(start);
@@ -104,11 +107,11 @@ export async function createStage({ canvas, veil, mobile }) {
   for (let d = 1; d < N; d++) { ensure(start + d); ensure(start - d); }
 
   let shown = -1, last = performance.now(), slow = 0, ratio = 1, sideNow = 0, downNow = 0;
-  let beat = 0, breathFrom = 0; // heartbeats counted so far; when the breathing scene came on
+  let beat = 0, breathFrom = 0; // heartbeats counted so far; when the scene on screen came on
   // for tests and the video capture: the shared state, how many scenes are built, a switch that keeps the
   // resolution fixed, one that runs frames without drawing them (to start a capture mid-story on the same
-  // heartbeat) and the heartbeats counted
-  const dda = window.__dda = { store, built: () => recs.filter(Boolean).length, fixedResolution: false, skipRender: false, beat: () => beat };
+  // heartbeat), the heartbeats counted, and a moment (seconds) to hold the people's movement at
+  const dda = window.__dda = { store, built: () => recs.filter(Boolean).length, fixedResolution: false, skipRender: false, beat: () => beat, timeOverride: null, rec: i => recs[i] };
   const head = new THREE.Vector3();
   const tick = now => {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
@@ -124,14 +127,26 @@ export async function createStage({ canvas, veil, mobile }) {
     if (!recs[i]) i = shown >= 0 ? shown : i;
     const r = recs[i];
     if (r) {
-      if (shown !== i) { E.show(r); shown = i; breathFrom = now / 1000; }
+      const u = Math.min(1, Math.max(0, p - i + 0.5));
+      if (shown !== i) {
+        // coming back up into a scene from the next one: its movement has already played (a jump from the menu lands
+        // on u = 0.5, give or take a pixel of scroll, and starts it)
+        if (r.motion && u > 0.6 && shown > i) breathFrom = now / 1000 - r.motion.skip;
+        else breathFrom = now / 1000;
+        E.show(r); shown = i;
+      }
+      // the people move with the time since the scene came on (held still for reduced motion)
+      if (r.motion) {
+        r.motion.update(dda.timeOverride ?? (store.reducedMotion ? r.motion.still : now / 1000 - breathFrom));
+        if (r.motion.moves) r.head = E.boneAt(r.hero, 'head', [0, 0.06, 0.06]);
+      }
       const s = SCENES[i];
       // his heart: the rate eases toward the scene's, and the beats are counted
       store.bpm += (s.bpm - store.bpm) * (1 - Math.exp(-dt * 1.5));
       beat += dt * store.bpm / 60;
-      const u = Math.min(1, Math.max(0, p - i + 0.5));
       const portrait = camera.aspect < 0.9;
       const cam = cameraAt(r, s.move, u, portrait, s.lift);
+      if (r.motion?.focusHero) cam.focus = cam.pos.distanceTo(r.head);
       camera.position.copy(cam.pos);
       // on wide screens the text column sits on the left: slide the picture right to make room for it
       const W = canvas.clientWidth, H = canvas.clientHeight;

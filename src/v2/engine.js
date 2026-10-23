@@ -122,6 +122,7 @@ export async function loadPeople(hiDetail = true) {
 }
 
 let baked = null;
+export const bakedPose = (id, i) => baked?.[id]?.[i];
 export async function loadPoses() {
   baked = await (await fetch(`${BASE}v2/poses.json`)).json();
 }
@@ -133,14 +134,14 @@ export let scene = null;
 let rec = null, k = 0;
 export function startBuild(id) {
   scene = new THREE.Group();
-  rec = { id, group: scene, palette: null, glows: [], cam: null, hero: null };
+  rec = { id, group: scene, palette: null, glows: [], cam: null, hero: null, people: [], statues: [] };
   k = 0;
   return rec;
 }
 export const currentBuild = () => rec;
 
 // A person in the baked pose of the k-th person() call of this scene.
-export function person(name, { pos = [0, 0, 0], heading = 0 } = {}) {
+export function person(name, { pos = [0, 0, 0], heading = 0, walkAt = null } = {}) {
   const root = new THREE.Group();
   const model = SkeletonUtils.clone(models[name].scene);
   root.add(model);
@@ -158,7 +159,9 @@ export function person(name, { pos = [0, 0, 0], heading = 0 } = {}) {
   root.rotation.y = heading;
   root.updateMatrixWorld(true);
   scene.add(root);
-  const p = { root, model, bones, name };
+  // what motion.js needs to move them: which call of the scene this was, and where it stood
+  const p = { root, model, bones, name, k: k - 1, walkAt, pos: [...pos], heading };
+  rec.people.push(p);
   if (name === HERO && !rec.hero) rec.hero = p;
   return p;
 }
@@ -170,7 +173,9 @@ export function statue(name, { pos = [0, 0, 0], heading = 0 } = {}) {
   root.position.set(...pos);
   root.rotation.y = heading;
   scene.add(root);
-  return { root, name };
+  const s = { root, name, pos: [...pos], heading };
+  rec.statues.push(s);
+  return s;
 }
 
 // World position of a bone (or a point offset from it, in the person's own frame).

@@ -56,6 +56,7 @@ O `vite.config.js` usa `base: './'`, então a pasta `dist/` funciona em qualquer
 | Roteiro: lugar, hora, textos, conversas e movimento de câmera de cada cena | `src/v2/story.js` |
 | Cenários: objetos, pessoas, poses, paleta, brilho e enquadramento de cada cena | `src/v2/scenes.js` |
 | Movimentos de câmera, cortina entre cenas e coração e respiração no brilho do protagonista | `src/v2/stage.js` |
+| Pessoas em movimento: ele andando no parque, a multidão na faixa e no final, gestos, acenos e respiração | `src/v2/motion.js` (gestos gravados em `public/v2/motion.json`) |
 | Música de fundo e botão de som | `src/audio/music.js`, `src/ui/Chrome.jsx` |
 | Tela de carregamento, barra de rolagem e assinatura | `src/ui/Preloader.jsx`, `src/ui/Scrollbar.jsx`, `src/ui/Credit.jsx` |
 | Renderizador, efeitos (AO, desfoque, bloom, vinheta, granulado) e carregamento das pessoas | `src/v2/engine.js` |
@@ -67,6 +68,7 @@ O `vite.config.js` usa `base: './'`, então a pasta `dist/` funciona em qualquer
 
 - **Pessoas**: nove escaneamentos gratuitos da RenderPeople. Seis têm esqueleto (Claudia, Carla, Eric, Sophia, Nathan, Manuel) e três já vêm posados (Dennis de terno, Mei com uma pasta, Fabienne com o filho Percy). `scripts/bake/` calcula a oclusão ambiente e marca pele e cabelo nas cores de vértice; `npm run optimize` suaviza a pele e comprime (`public/models/`). `scripts/detail-maps.py` gera, a partir dos mapas 8K da RenderPeople, uma textura de detalhe por pessoa com o relevo das dobras e do cabelo (`public/detail/`, e `public/detail4k/` para o protagonista). As instruções para refazer estão no topo de cada script.
 - **Poses**: vêm de capturas de movimento reais da CMU (sentar, deitar, andar, conversar), adaptadas ao esqueleto das pessoas e acertadas com cinemática inversa para cada cadeira, cama e mesa (`src/v2/posing.js` guarda as receitas). O resultado fica pronto em `public/v2/poses.json`, então o site não carrega capturas nem calcula nada: a primeira chamada `person()` de uma cena usa a primeira pose gravada daquela cena, a segunda usa a segunda, e assim por diante. Mudar a quantidade ou a ordem das pessoas de uma cena pede gravar as poses de novo.
+- **Movimento**: `src/v2/motion.js` anima algumas cenas por cima das poses gravadas. Cada quadro é calculado só a partir do tempo desde que a cena apareceu (nada se acumula de um quadro para o outro e não há sorteio), então o vídeo pode ser gravado em partes e o site mostra sempre a mesma cena. O andar usa a captura `walk` do protagonista, com as pernas acompanhando a distância percorrida para os pés não deslizarem. Os gestos de mão (reunião, Carla, psicóloga) são poses-chave gravadas no laboratório por `scripts/lab/bake-motion.cjs`; ao gravar as poses de novo, grave os gestos também.
 - **Objetos**: modelos da Poly Haven. `scripts/get-props.py` baixa os originais em `assets-src/props/` e `scripts/pack-props.mjs` gera os `.glb` leves em `public/props/` (texturas WebP de 512 px, malhas simplificadas e comprimidas).
 
 ## Créditos e cuidados

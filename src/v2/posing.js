@@ -9,7 +9,8 @@ import * as THREE from 'three';
 //   leg_l / leg_r / arm_l / arm_r: two-bone IK. { to: [x, y, z] } puts the foot sole (legs) or the wrist (arms)
 //     at a point; { rel: [x, y, z] } is the same point relative to the hip joint, in the body frame;
 //     { at: ['head', [x, y, z]] } is relative to a bone that is already posed. pole: where the knee / elbow points.
-//   hip: { pos, rot } places and turns the pelvis. curl_l / curl_r: finger curl in degrees.
+//   hip: { pos, rot } places and turns the pelvis. curl_l / curl_r: finger curl in degrees (grip_l / grip_r: its
+//   share per joint, knuckle to tip).
 //   level: (lab) the chest is brought upright sideways and the head level, after the pose is built.
 //   frame: 'body' reads every aim, pole and rel point in the frame of the turned pelvis, so a pose can be
 //     designed upright and then laid down by hip.rot.
@@ -248,11 +249,13 @@ export function applyPose(p, pose, { keepBase = false } = {}) {
     if (open) for (const f of FINGERS) for (let k = 1; k <= 3; k++) { const b = B[`${f}_0${k}_${s}`]; if (b) b.quaternion.copy(p.bind[b.name].q); }
     const curl = pose['curl_' + s] ?? (p.noFingers ? 22 : pose.base ? 0 : 25);
     if (!curl) continue;
+    // grip_l / grip_r: how the curl is shared out from the knuckle to the tip, instead of a relaxed hand's
+    const K = pose['grip_' + s] || CURL_K;
     const fwd = Db['hand_' + s];
     const axisW = fwd.clone().cross(palmB[s]).normalize();
     for (const f of FINGERS) for (let k = 1; k <= 3; k++) {
       const b = B[`${f}_0${k}_${s}`]; if (!b) continue;
-      const amt = CURL_F[f] * CURL_K[k - 1] * curl * D2R;
+      const amt = CURL_F[f] * K[k - 1] * curl * D2R;
       if (open) b.parent.updateMatrixWorld(true);
       const wq = open ? b.parent.getWorldQuaternion(new THREE.Quaternion()).multiply(b.quaternion) : Qb[b.name];
       const axisL = axisW.clone().applyQuaternion(wq.clone().invert());
@@ -396,13 +399,15 @@ export const POSES = {
     base: cmu('82_05', 7.4), hip: { pos: [0, 0.1, 0] }, plant: true, spine_02: { rot: [6, 0, 0] }, neck: { rot: [16, 0, 0] }, head: { rot: [12, 0, 0] },
     arm_r: { at: ['head', [-0.03, 0.06, 0.11]], pole: [-0.3, -1, 0.4] }, hand_r: { aim: [0.5, 0.6, 0.2], palm: [0.3, -0.2, -1] }, curl_r: 30,
   },
-  // lying on the back (head towards -z), knees up under the covers, a forearm over the eyes; the neck and upper
-  // back curl up so the head rests on a pillow instead of lying flat on the mattress
+  // lying on the back (head towards -z), knees up under the covers, just awake, a hand on his heart; the neck and
+  // upper back curl up so the head rests on a pillow instead of lying flat on the mattress
   lieBack: {
     base: cmu('140_08', 0.34), frame: 'pelvis', hip: { pos: [0, 0.12, 0] },
     spine_02: { rot: [5, 0, 0] }, spine_03: { rot: [8, 0, 0] }, neck: { rot: [16, 0, 0] }, head: { rot: [6, -16, 0] },
-    arm_r: { at: ['head', [-0.1, 0.12, -0.05]], pole: [-1, 0.3, -0.5] }, hand_r: { aim: [1, 0.35, -0.15], palm: [0, 0.1, -1] }, open_r: true, curl_r: 12,
-    arm_l: { rel: [0.05, 0.36, 0.15], pole: [1, -0.4, 0] }, hand_l: { aim: [-1, 0.2, 0.1], palm: [0, 0, -1] }, curl_l: 20,
+    // the right forearm across his chest, its elbow against his side, the hand flat on the left of his chest (on
+    // his heart); the left arm lies loose along his side on the mattress, palm down
+    arm_r: { rel: [0.02, 0.29, 0.24], pole: [-1, -0.07, -0.45] }, hand_r: { aim: [0.9, 0.35, -0.24], palm: [0.25, 0.18, -0.95] }, open_r: true, curl_r: 12,
+    arm_l: { rel: [0.24, 0.04, -0.05], pole: [1, 0, -0.3] }, hand_l: { aim: [0.1, -0.98, -0.19], palm: [0, 0.19, -0.98] }, curl_l: 25,
   },
   // lying on the right side (head towards -z, facing -x), knees bent, phone in the left hand in front of the face; the spine bends
   // up off the mattress towards the shoulders and the head rests on the pillow
@@ -412,8 +417,8 @@ export const POSES = {
     foot_l: { aim: [0.1, -0.9, 0.5] }, foot_r: { aim: [0, -0.9, 0.7] },
     // the lower (right) arm is folded up under his head on the pillow; the upper (left) forearm comes up in front of
     // his chest and that hand holds the phone low in front of his face, palm and screen turned to him
-    arm_l: { rel: [-0.02, 0.48, 0.4], pole: [-0.3, -1, 0.4] }, hand_l: { aim: [0.75, 0.25, 0.6], palm: [0.1, 0.2, -1] }, curl_l: 40,
-    arm_r: { rel: [-0.1, 0.78, 0.06], pole: [0, 0.2, 1] }, hand_r: { aim: [0, 0.8, 0.4], palm: [-1, 0, 0] }, curl_r: 20,
+    arm_l: { rel: [0.08, 0.48, 0.5], pole: [-1, -0.8, 0.2] }, hand_l: { aim: [0.1, 0.66, 0.74], palm: [-0.14, 0.75, -0.65] }, curl_l: 40,
+    arm_r: { rel: [-0.1, 0.78, 0.06], pole: [0, 0.2, 1] }, hand_r: { aim: [0.03, -0.1, -1], palm: [1, 0, 0] }, curl_r: 20,
   },
 };
 
@@ -483,9 +488,10 @@ export const STANDING = {
     arm_r: { rel: [-0.16, -0.06, 0.07] }, hand_r: { aim: [0.2, -1, 0.3], palm: [-1, 0, 0] }, curl_r: 30,
   },
   // the left hand round a pole that stands at [0.18, y, 0.3] in his own space, held like a handshake at chest
-  // height (forearm up and forward, thumb on top), the right hand in his pocket, the weight on the leg away from it
+  // height (forearm up and forward, thumb on top), the right hand in his pocket, the weight on the leg away from it;
+  // the free left foot stays in under him, not out against the pole's foot
   poleHold: {
-    ...atEase('r', { base: cmu('77_02', 2.7) }), level: true, neck: { rot: [12, 0, 0] }, head: { rot: [12, 6, 0] },
+    ...atEase('r', { base: cmu('77_02', 2.7), out: 0.12, step: -0.02, toe: 6 }), level: true, neck: { rot: [12, 0, 0] }, head: { rot: [12, 6, 0] },
     arm_l: { to: [0.2, 1.36, 0.25], pole: [0.4, -1, -0.4] }, hand_l: { aim: [-0.1, 0.55, 1], palm: [-1, 0, 0.1] }, curl_l: 58,
     arm_r: { rel: [-0.17, -0.07, 0.08] }, hand_r: { aim: [0.25, -1, 0.35], palm: [1, 0, 0] }, curl_r: 34,
   },
