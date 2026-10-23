@@ -31,7 +31,7 @@ export function Logo() {
     <svg viewBox="0 0 40 40" aria-hidden="true">
       <mask id={id}>
         <rect width="40" height="40" fill="#fff" />
-        <path d="M6.5 22.5c3.4 0 4.6-6.5 8.2-6.5s4.8 9 8.4 9 4.6-6 7.8-6c2 0 3 1.4 3.6 2.4" fill="none" stroke="#000" strokeWidth="3.3" strokeLinecap="round" />
+        <path d="M9.9 21.7c2.45 0 3.3-4.7 5.9-4.7s3.45 6.5 6.05 6.5 3.3-4.3 5.6-4.3c1.45 0 2.15 1 2.6 1.75" fill="none" stroke="#000" strokeWidth="2.9" strokeLinecap="round" />
       </mask>
       <circle cx="20" cy="20" r="16.5" fill="currentColor" mask={`url(#${id})`} />
     </svg>

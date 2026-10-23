@@ -23,7 +23,7 @@ O `vite.config.js` usa `base: './'`, então a pasta `dist/` funciona em qualquer
 - O coração do protagonista bate no ritmo de cada cena (`bpm`): o número de batimentos no canto e o brilho no peito dele seguem esse ritmo.
 - Uma música de fundo original toca enquanto o leitor está no site: um piano calmo (68 BPM, em fá maior e ré menor) que dura 1min53 e emenda em si mesma sem corte, porque cada volta começa enquanto as últimas notas da anterior ainda soam (`src/audio/music.js`, arquivo `public/audio/respira.mp3`). O navegador só deixa tocar som depois de um clique, toque ou tecla: a música entra sozinha no primeiro deles, e o botão ao lado do menu liga e desliga (a escolha fica guardada no navegador). O arquivo só baixa depois que a cena carrega.
 - Pular de capítulo pelo menu, pelas partes da história ou pela pílula do CVV faz uma passagem curta pela cor da cena de destino e chega lá direto, sem rolar por todas as cenas do meio. A barra de rolagem do navegador fica escondida e o site desenha a sua (`src/ui/Scrollbar.jsx`): dá para arrastar, e um clique na linha anda uma cena.
-- A tela de carregamento mostra o protagonista em escultura escura (`public/loader-bust.webp`, renderizado do próprio modelo dele), o título, a marca e a porcentagem. A última cena leva a assinatura "Developed by Miguel Angelo" com a logo dele (`src/ui/Credit.jsx`).
+- A tela de carregamento mostra o protagonista em escultura escura (`public/loader-bust.webp`, renderizado do próprio modelo dele), o título, a marca e a porcentagem.
 - `window.__dda` expõe o estado, quantas cenas já estão prontas e as batidas contadas, para testes e para a gravação de vídeo.
 - A música foi composta em código, com o mesmo piano e a mesma sala do vídeo: a partitura está em `scripts/music/score.js` e as instruções para gerar o MP3 no topo de `scripts/music/render.mjs`.
 
@@ -35,7 +35,7 @@ O `vite.config.js` usa `base: './'`, então a pasta `dist/` funciona em qualquer
 | Cenários: objetos, pessoas, poses, paleta, brilho e enquadramento de cada cena | `src/v2/scenes.js` |
 | Movimentos de câmera, cortina entre cenas e coração e respiração no brilho do protagonista | `src/v2/stage.js` |
 | Música de fundo e botão de som | `src/audio/music.js`, `src/ui/Chrome.jsx` |
-| Tela de carregamento, barra de rolagem e assinatura | `src/ui/Preloader.jsx`, `src/ui/Scrollbar.jsx`, `src/ui/Credit.jsx` |
+| Tela de carregamento e barra de rolagem | `src/ui/Preloader.jsx`, `src/ui/Scrollbar.jsx` |
 | Renderizador, efeitos (AO, desfoque, bloom, vinheta, granulado) e carregamento das pessoas | `src/v2/engine.js` |
 | Paletas das cenas | `src/story.js` |
 | Camada de texto | `src/ui/Overlay.jsx`, `src/ui/Chrome.jsx`, `src/styles.css` |
