@@ -60,6 +60,8 @@ uniform float uKeyMin;
 uniform float uSatin;
 uniform float uSkinBase;
 uniform float uSkinAo;
+uniform float uSkinCrease;
+uniform float uSkinKey;
 ${stageUniformsGLSL}
 varying vec3 vViewPosition;
 varying vec3 vWorldPosition;
@@ -78,6 +80,8 @@ uniform float uDetailHair;
 uniform float uDetailBias;
 uniform float uCavity;
 uniform float uHairCavity;
+uniform float uSkinBlur;
+uniform float uSkinCavity;
 #endif
 ${stageFunctionsGLSL}
 float linearStep(float e0, float e1, float x) { return clamp((x - e0) / (e1 - e0), 0.0, 1.0); }
@@ -106,13 +110,13 @@ void main() {
   vec3 viewNormal = safeNormalize(vViewNormal) * faceDirection;
   float cavity = 1.0;
 #ifdef USE_DETAIL
-  // folds, seams and hair strands from the scan; skin reads a blurrier mip so faces stay glassy
+  // folds, seams and hair strands from the scan; skin reads a slightly blurrier mip so faces stay glassy
   float skinW = clamp(vSkin, 0.0, 1.0), hairW = clamp(vHair, 0.0, 1.0);
-  vec4 detail = texture2D(uDetail, vUv, uDetailBias + skinW * 1.5 - hairW * 0.6);
+  vec4 detail = texture2D(uDetail, vUv, uDetailBias + skinW * uSkinBlur - hairW * 0.6);
   vec2 nxy = detail.rg * 2.0 - 1.0;
   vec3 mapN = vec3(nxy * mix(mix(uDetailCloth, uDetailSkin, skinW), uDetailHair, hairW), sqrt(max(0.0, 1.0 - dot(nxy, nxy))));
   viewNormal = perturbNormal(-vViewPosition, viewNormal, vUv, mapN);
-  cavity = mix(1.0, detail.b, clamp(uCavity * mix(1.0, 0.3, skinW) * mix(1.0, uHairCavity, hairW), 0.0, 1.0));
+  cavity = mix(1.0, detail.b, clamp(uCavity * mix(1.0, uSkinCavity, skinW) * mix(1.0, uHairCavity, hairW), 0.0, 1.0));
 #endif
   vec3 V = normalize(cameraPosition - vWorldPosition);
   vec3 N = safeNormalize((vec4(viewNormal, 0.0) * viewMatrix).xyz);
@@ -137,8 +141,9 @@ void main() {
   // skin: glass that shows the stage behind it and turns blue towards the silhouette
   vec3 rd = normalize(vWorldPosition - cameraPosition);
   vec3 behind = envColor(vWorldPosition, refract(rd, N, 1.0 / 1.45));
-  float aoS = mix(1.0, ao, 0.45); // glass hides most of the face's small creases
-  vec3 glass = behind * (uSkinBase + uSkinAo * aoS) + uColorBright * 0.12 * aoS;
+  // the face's creases (eyes, nostrils, lips) stay readable through the glass, and the key models its forms
+  float aoS = mix(1.0, ao, uSkinCrease);
+  vec3 glass = (behind * (uSkinBase + uSkinAo * aoS) + uColorBright * 0.12 * aoS) * mix(1.0 - uSkinKey, 1.0 + uSkinKey * 0.5, key);
   vec3 skin = mix(glass, mix(uColorDark, uColorBright, 0.3 + 0.55 * aoS * key), smoothstep(0.15, 0.85, edge));
   skin += pow(gloss, 9.0) * 0.5 * (0.4 + 0.6 * ao);
   skin += edge * (0.35 + ao * 0.65) * (0.75 + linearStep(0.25, 1.4, edge) * ao) * hue2RGBSmooth(viewNormal.z) * 0.18 * ao;
@@ -179,12 +184,16 @@ export function createSharedUniforms() {
     uFacing: { value: 0 },
     uSkinBase: { value: 0.5 },
     uSkinAo: { value: 0.35 },
+    uSkinCrease: { value: 0.8 },
+    uSkinKey: { value: 0.25 },
     uDetailCloth: { value: 1.1 },
-    uDetailSkin: { value: 0.35 },
+    uDetailSkin: { value: 0.8 },
     uDetailHair: { value: 1.4 },
     uDetailBias: { value: 0.15 },
     uCavity: { value: 0.95 },
     uHairCavity: { value: 1.2 },
+    uSkinBlur: { value: 0.4 },
+    uSkinCavity: { value: 0.75 },
   };
 }
 

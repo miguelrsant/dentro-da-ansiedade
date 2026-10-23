@@ -502,10 +502,13 @@ export const STANDING = {
     // the belly hand: the forearm runs across the front with the wrist straight, palm on the body
     arm_l: { rel: [0.05, 0.26, 0.19], pole: [1, -0.8, -0.1] }, hand_l: { aim: [-0.93, 0, 0.33], palm: [0.33, 0, -1] }, open_l: true, curl_l: 16,
   },
-  // both hands in the front pockets, standing straight and square, head level (the men in the reference)
+  // both hands in the front pockets, standing straight and square, head level (the men in the reference).
+  // No `level` here: on this capture it rolls the chest 6 degrees aside; the spine is left upright and the
+  // collarbones and chest are squared instead (measured: spine, shoulder line and pelvis within 3 degrees)
   pockets: {
-    ...atEase('r', { base: cmu('113_21', 3.0), shift: 0.012, drop: 0, turn: 0, step: 0.04, out: 0.12, toe: 10 }), level: true,
-    spine_01: { rot: [-2, 0, 0] }, spine_02: { rot: [0, 0, 0] }, spine_03: { rot: [2, 0, 0] }, look: [0, 1.5, 4],
+    ...atEase('r', { base: cmu('113_21', 3.0), shift: 0.012, drop: 0, turn: 0, step: 0.04, out: 0.12, toe: 10 }),
+    spine_01: { rot: [-2, 0, 0] }, spine_02: { rot: [0, -8, 0] }, spine_03: { rot: [2, -8, 0] }, look: [0, 1.5, 4],
+    shoulder_l: { rot: [0, 0, -10] }, shoulder_r: { rot: [0, 0, -10] },
     arm_l: { rel: [0.17, -0.07, 0.08] }, hand_l: { aim: [-0.25, -1, 0.35], palm: [-1, 0, 0] }, curl_l: 34,
     arm_r: { rel: [-0.17, -0.07, 0.08] }, hand_r: { aim: [0.25, -1, 0.35], palm: [1, 0, 0] }, curl_r: 34,
   },
