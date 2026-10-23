@@ -20,9 +20,12 @@ O `vite.config.js` usa `base: './'`, então a pasta `dist/` funciona em qualquer
 - O React desenha só a camada de texto (`src/ui/`): títulos, conversas, notificações, números, a respiração guiada e os cartões de ajuda. A rolagem vira um número de cena (`store.progress`, de 0 a 15).
 - O palco 3D (`src/v2/`) roda fora do React. `stage.js` monta cada cena uma vez, em segundo plano e na ordem da história, mostra a cena em que o leitor está, move a câmera dela conforme a rolagem e passa por uma cortina na cor da paleta entre uma cena e outra.
 - Em telas largas a imagem desliza para a direita para abrir espaço para a coluna de texto; em telas em pé ela desce. O desfoque acompanha a câmera, e em máquinas lentas a resolução cai aos poucos.
-- O coração do protagonista bate o tempo todo, no ritmo de cada cena (`bpm`), e cada cena diz o quanto ele está ansioso (`anx`, de 0 a 1). Quanto mais ansioso, mais as bordas da tela pulsam em vermelho a cada batida, a imagem dá um leve empurrão para a frente e o "tum-tum" soa mais alto. O som é feito na hora com Web Audio (`src/audio/heart.js`) e cai exatamente nas batidas que a tela mostra.
-- O navegador só deixa tocar som depois de um clique, toque ou tecla: o som liga sozinho no primeiro deles, e o botão ao lado do menu liga e desliga (a escolha fica guardada no navegador). Com `prefers-reduced-motion`, a tela não pulsa nem dá o empurrão, só fica tingida.
+- O coração do protagonista bate no ritmo de cada cena (`bpm`): o número de batimentos no canto e o brilho no peito dele seguem esse ritmo.
+- Uma música de fundo original toca enquanto o leitor está no site: um piano calmo (68 BPM, em fá maior e ré menor) que dura 1min53 e emenda em si mesma sem corte, porque cada volta começa enquanto as últimas notas da anterior ainda soam (`src/audio/music.js`, arquivo `public/audio/respira.mp3`). O navegador só deixa tocar som depois de um clique, toque ou tecla: a música entra sozinha no primeiro deles, e o botão ao lado do menu liga e desliga (a escolha fica guardada no navegador). O arquivo só baixa depois que a cena carrega.
+- Pular de capítulo pelo menu, pelas partes da história ou pela pílula do CVV faz uma passagem curta pela cor da cena de destino e chega lá direto, sem rolar por todas as cenas do meio. A barra de rolagem do navegador fica escondida e o site desenha a sua (`src/ui/Scrollbar.jsx`): dá para arrastar, e um clique na linha anda uma cena.
+- A tela de carregamento mostra o protagonista em escultura escura (`public/loader-bust.webp`, renderizado do próprio modelo dele), o título, a marca e a porcentagem. A última cena leva a assinatura "Developed by Miguel Angelo" com a logo dele (`src/ui/Credit.jsx`).
 - `window.__dda` expõe o estado, quantas cenas já estão prontas e as batidas contadas, para testes e para a gravação de vídeo.
+- A música foi composta em código, com o mesmo piano e a mesma sala do vídeo: a partitura está em `scripts/music/score.js` e as instruções para gerar o MP3 no topo de `scripts/music/render.mjs`.
 
 ## Onde mexer
 
@@ -30,8 +33,9 @@ O `vite.config.js` usa `base: './'`, então a pasta `dist/` funciona em qualquer
 | --- | --- |
 | Roteiro: lugar, hora, textos, conversas e movimento de câmera de cada cena | `src/v2/story.js` |
 | Cenários: objetos, pessoas, poses, paleta, brilho e enquadramento de cada cena | `src/v2/scenes.js` |
-| Movimentos de câmera, cortina entre cenas, coração na tela e respiração no brilho do protagonista | `src/v2/stage.js` |
-| Som do coração e botão de som | `src/audio/heart.js`, `src/ui/Chrome.jsx` |
+| Movimentos de câmera, cortina entre cenas e coração e respiração no brilho do protagonista | `src/v2/stage.js` |
+| Música de fundo e botão de som | `src/audio/music.js`, `src/ui/Chrome.jsx` |
+| Tela de carregamento, barra de rolagem e assinatura | `src/ui/Preloader.jsx`, `src/ui/Scrollbar.jsx`, `src/ui/Credit.jsx` |
 | Renderizador, efeitos (AO, desfoque, bloom, vinheta, granulado) e carregamento das pessoas | `src/v2/engine.js` |
 | Paletas das cenas | `src/story.js` |
 | Camada de texto | `src/ui/Overlay.jsx`, `src/ui/Chrome.jsx`, `src/styles.css` |
@@ -49,6 +53,7 @@ O `vite.config.js` usa `base: './'`, então a pasta `dist/` funciona em qualquer
 - Captura de movimento: [CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu/), criada com apoio da NSF (EIA-0196217), na conversão para BVH de Bruce Hahne.
 - Objetos: [Poly Haven](https://polyhaven.com/models), licença CC0.
 - Fonte: Host Grotesk (Google Fonts, licença OFL).
+- Música: original, composta para o site.
 - Dado da cena 4: Organização Mundial da Saúde, 2017 (9,3% da população brasileira com transtorno de ansiedade).
 - Contatos de ajuda: CVV 188 (cvv.org.br), SAMU 192, CAPS e UBS pelo SUS.
 - Licença: o código está sob a licença MIT (arquivo `LICENSE`). As pessoas em `public/models/`, `public/detail*/` e `assets-src/raw/` não entram nela, porque seguem a licença da RenderPeople.

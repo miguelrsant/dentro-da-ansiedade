@@ -10,6 +10,7 @@
   --glass-line: rgba(255, 255, 255, 0.55);
   --glass-ink: #1b1a31;
   --pill-dark: #16152a;
+  --loader: #0f121f;
   --font: "Host Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --gutter-l: max(16px, env(safe-area-inset-left, 0px));
   --gutter-r: max(16px, env(safe-area-inset-right, 0px));
@@ -20,14 +21,18 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--stage); color: var(--ink); }
+/* the browser's scroll bar is hidden; the page draws its own (Scrollbar.jsx) */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }
 body { font-family: var(--font); font-size: 16px; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .track { position: relative; width: 1px; pointer-events: none; }
 .stage { position: fixed; inset: 0; z-index: 0; }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .veil { position: absolute; inset: 0; opacity: 0; pointer-events: none; background: var(--stage); }
-/* the heartbeat: the edges of the picture flush red with each beat when he is anxious (opacity set by stage.js) */
-.flush { position: absolute; inset: 0; opacity: 0; pointer-events: none; will-change: opacity; background: radial-gradient(ellipse 72% 68% at 50% 50%, rgba(255, 40, 70, 0) 40%, rgba(214, 22, 62, 0.34) 68%, rgba(92, 0, 26, 0.8) 100%); }
+/* a jump to another scene: a short fade to the scene's colour while the page moves there (App.jsx) */
+.jump { position: fixed; inset: 0; z-index: 4; opacity: 0; pointer-events: none; transition: opacity 0.42s ease; }
+.jump.is-on { opacity: 1; transition-duration: 0.38s; }
 
 /* chapters */
 .overlay { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
@@ -69,7 +74,7 @@ body { font-family: var(--font); font-size: 16px; overflow-x: hidden; -webkit-fo
 
 /* body readout */
 .vitals { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 22px; }
-.vitals b { font-size: clamp(70px, 8vw, 140px); font-weight: 600; line-height: 0.8; letter-spacing: -0.06em; font-variant-numeric: tabular-nums; transform-origin: 0 100%; }
+.vitals b { font-size: clamp(70px, 8vw, 140px); font-weight: 600; line-height: 0.8; letter-spacing: -0.06em; font-variant-numeric: tabular-nums; }
 .vitals span { font-size: 15px; line-height: 1.25; color: var(--ink-soft); padding-bottom: 6px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .chips li { padding: 9px 16px; border-radius: 999px; border: 1px solid var(--glass-line); font-size: 16px; font-weight: 500; background: rgba(255, 255, 255, 0.08); }
@@ -136,8 +141,6 @@ body { font-family: var(--font); font-size: 16px; overflow-x: hidden; -webkit-fo
 
 .pill { position: fixed; bottom: calc(26px + var(--edge-b)); display: flex; align-items: center; gap: 16px; border: 0; border-radius: 999px; font: inherit; font-weight: 600; font-size: 17px; letter-spacing: -0.01em; cursor: pointer; }
 .pill--left { left: calc(var(--gutter-l) + 12px); padding: 12px 26px 12px 12px; background: rgba(255, 255, 255, 0.24); color: var(--ink); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
-.pill--right { right: calc(var(--gutter-r) + 12px); padding: 16px 22px 16px 28px; background: var(--pill-dark); color: #fff; }
-.pill--right svg { width: 26px; height: 26px; }
 .pulse { position: relative; width: 40px; height: 40px; flex: none; display: grid; place-items: center; }
 .pulse i { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.7); animation: ripple 2.4s infinite; opacity: 0; }
 .pulse i:nth-child(2) { animation-delay: 0.8s; }
@@ -149,11 +152,36 @@ body { font-family: var(--font); font-size: 16px; overflow-x: hidden; -webkit-fo
 .hint.is-off { opacity: 0; }
 @keyframes nudge { 50% { transform: translateY(5px); } }
 
-.preloader { position: fixed; inset: 0; z-index: 10; display: grid; place-content: center; justify-items: center; gap: 22px; background: var(--stage); color: var(--ink); transition: opacity 1s, filter 1s; }
-.preloader svg { width: 56px; height: 56px; animation: breathe 2.6s ease-in-out infinite; }
-.preloader p { margin: 0; font-size: 15px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+/* the page's scroll bar (Scrollbar.jsx): a thin line on the right edge, with a thumb that widens under the mouse */
+.scrollbar { position: fixed; top: calc(10px + var(--edge-t)); bottom: calc(10px + var(--edge-b)); right: max(2px, env(safe-area-inset-right, 0px)); z-index: 6; width: 16px; opacity: 0.55; cursor: pointer; touch-action: none; transition: opacity 0.4s; }
+.scrollbar::before { content: ""; position: absolute; top: 0; bottom: 0; right: 7px; width: 2px; border-radius: 2px; background: rgba(255, 255, 255, 0.32); }
+.scrollbar i { position: absolute; top: 0; right: 6px; width: 4px; border-radius: 4px; background: #fff; box-shadow: 0 0 12px rgba(36, 34, 110, 0.22); transition: width 0.2s, right 0.2s; will-change: transform; }
+.scrollbar:hover, .scrollbar.is-active, .scrollbar.is-drag { opacity: 1; }
+.scrollbar:hover i, .scrollbar.is-drag i { right: 5px; width: 6px; }
+
+/* the author's signature in the corner of the last screen */
+.credit { position: absolute; right: calc(var(--gutter-r) + 14px); bottom: calc(46px + var(--edge-b)); display: flex; align-items: center; gap: 10px; margin: 0; color: var(--ink-soft); font-size: 14px; letter-spacing: -0.005em; }
+.credit svg { width: auto; height: 25px; color: var(--ink); }
+.credit b { color: var(--ink); font-weight: 600; }
+
+/* loading screen: a dark sculpture of the protagonist under the title, the mark, the percentage and a bar */
+html.is-loading, html.is-loading body { background: var(--loader); }
+.preloader { position: fixed; inset: 0; z-index: 10; overflow: hidden; background: var(--loader); color: #fff; transition: opacity 1s, filter 1s; }
+.preloader-bust { position: absolute; left: 50%; top: -8vh; height: 150vh; width: auto; aspect-ratio: 1; transform: translateX(-50%); opacity: 0; transition: opacity 1.4s ease; pointer-events: none; user-select: none; }
+.preloader-bust.is-in { opacity: 1; }
+.preloader-title { position: absolute; left: 0; right: 0; top: 43%; margin: 0; padding: 0 var(--gutter-r) 0 var(--gutter-l); transform: translateY(-50%); text-align: center; color: rgba(222, 223, 234, 0.94); font-weight: 600; font-size: clamp(46px, 7vw, 132px); line-height: 0.92; letter-spacing: -0.05em; text-wrap: balance; }
+.preloader-brand { position: absolute; left: calc(var(--gutter-l) + 12px); bottom: calc(clamp(40px, 5.2vw, 66px) + var(--edge-b)); display: flex; align-items: center; gap: 10px; margin: 0; color: #ececf4; font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+.preloader-brand svg { width: 30px; height: 30px; }
+.preloader-count { position: absolute; right: calc(var(--gutter-r) + 12px); bottom: calc(clamp(34px, 4.6vw, 58px) + var(--edge-b)); display: flex; align-items: baseline; gap: 0.6em; margin: 0; font-size: clamp(20px, 1.9vw, 34px); font-weight: 500; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.preloader-count span { color: rgba(255, 255, 255, 0.46); }
+.preloader-count b { min-width: 2.7em; color: #fff; font-weight: 500; text-align: right; }
+.preloader-count.is-failed { max-width: min(60vw, 420px); font-size: 16px; line-height: 1.4; text-align: right; color: rgba(255, 255, 255, 0.8); }
+.preloader-bar { position: absolute; left: 0; right: 0; bottom: 0; height: clamp(8px, 1.4vw, 24px); }
+.preloader-bar i { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(200, 202, 216, 0.9), rgba(238, 239, 247, 0.98)); transform: scaleX(0); transform-origin: left; transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1); }
 .preloader.is-done { opacity: 0; filter: blur(12px); pointer-events: none; }
-@keyframes breathe { 50% { transform: scale(1.18); } }
+@media (max-aspect-ratio: 1/1) {
+  .preloader-bust { transform: translateX(-42%); } /* he looks to the left: keep his face on narrow screens */
+}
 
 button:focus-visible, a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 
@@ -215,8 +243,6 @@ button:focus-visible, a:focus-visible { outline: 2px solid #fff; outline-offset:
   .pill { font-size: 14px; }
   .pill--left { padding: 8px 16px 8px 8px; gap: 10px; }
   .pulse { width: 30px; height: 30px; }
-  .pill--right { padding: 12px 16px 12px 20px; }
-  .pill--right svg { width: 20px; height: 20px; }
   .hint { display: none; }
   .ring { width: 112px; height: 112px; }
   .help-card strong { font-size: 28px; }
@@ -225,16 +251,17 @@ button:focus-visible, a:focus-visible { outline: 2px solid #fff; outline-offset:
   .fine { font-size: 13px; }
   .vitals b { font-size: 76px; }
   .chips li { font-size: 14px; padding: 7px 12px; }
+  .credit { position: static; gap: 8px; font-size: 13px; }
+  .credit svg { height: 22px; }
+}
+@media (pointer: coarse) {
+  .scrollbar { opacity: 0; pointer-events: none; }
+  .scrollbar.is-active { opacity: 0.85; }
 }
 @media (max-width: 380px) {
   .acts-mobile em { display: none; }
-  /* the two pills side by side on the narrowest phones */
-  .pill { font-size: 13px; }
-  .pill--left { left: var(--gutter-l); padding: 6px 12px 6px 6px; gap: 8px; }
-  .pill--right { right: var(--gutter-r); padding: 10px 12px 10px 16px; gap: 10px; }
-  .pulse { width: 26px; height: 26px; }
-  .pill--right svg { width: 18px; height: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .caret, .dots-bubble i, .pulse i, .hint svg, .preloader svg { animation: none; }
+  .caret, .dots-bubble i, .pulse i, .hint svg { animation: none; }
+  .preloader-bust, .preloader-bar i { transition: none; }
 }

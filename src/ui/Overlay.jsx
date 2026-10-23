@@ -2,6 +2,7 @@ import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { store, subscribe } from '../store.js';
 import { SCENES, ACTS } from '../v2/story.js';
 import { ChatBox } from './ChatBox.jsx';
+import Credit from './Credit.jsx';
 
 // Offsets of the thought bubbles from his head: dx/dy on wide screens (scaled), mx/my in portrait.
 const SPOTS = [
@@ -94,6 +95,7 @@ function Scene({ s, i, live, sectionRef, bpmRef, breathRefs }) {
           <p className="fine">Em emergência, ligue 192 (SAMU). Esta é uma história informativa e não substitui acompanhamento profissional.</p>
         </div>
       )}
+      {s.final && <Credit />}
     </section>
   );
 }
@@ -138,10 +140,7 @@ export default function Overlay() {
         el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
         el.classList.toggle('is-on', on);
       });
-      if (bpmRef.current) {
-        bpmRef.current.textContent = Math.round(store.bpm);
-        if (!store.reducedMotion) bpmRef.current.style.transform = `scale(${(1 + 0.04 * store.pulse).toFixed(4)})`;
-      }
+      if (bpmRef.current) bpmRef.current.textContent = Math.round(store.bpm);
       const br = breathRefs.current;
       if (br.fill) {
         br.fill.style.transform = `scale(${(0.5 + 0.5 * store.breath.s).toFixed(3)})`;

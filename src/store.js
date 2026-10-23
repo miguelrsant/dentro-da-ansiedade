@@ -5,9 +5,7 @@ export const store = {
   chapter: 0,
   anchors: {}, // name -> { x, y, visible } in CSS pixels
   bpm: 96,
-  anx: 0.45, // how anxious he is (0..1), eased toward each scene's own
-  pulse: 0, // the heart's envelope this frame (0..1): the flush on the screen and the readouts beat with it
-  sound: 'armed', // the heartbeat sound: 'armed' (waits for a click or tap), 'on' or 'off' (src/audio/heart.js)
+  sound: 'armed', // the background music: 'armed' (waits for a click or tap), 'on' or 'off' (src/audio/music.js)
   breath: { label: 'Inspire', left: 4, s: 0 },
   loaded: false,
   failed: false,
