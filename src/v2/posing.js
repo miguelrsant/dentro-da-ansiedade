@@ -376,7 +376,8 @@ export const POSES = {
   sitPhone: {
     base: cmu('18_12', 5.8), hip: onSeat(), plant: true, level: true, neck: { rot: [10, 0, 0] }, head: { rot: [12, 0, 0] },
     arm_l: { rel: [0.04, 0.29, 0.33] }, arm_r: { rel: [-0.04, 0.29, 0.33] },
-    hand_l: { aim: [-0.12, 0.65, 0.75], palm: [-0.15, 0.75, -0.65] }, hand_r: { aim: [0.12, 0.65, 0.75], palm: [0.15, 0.75, -0.65] }, curl_l: 15, curl_r: 15,
+    // the palms cupped and turned up under the phone, fingers forward, not raised up in front of the chest
+    hand_l: { aim: [-0.12, 0.35, 0.93], palm: [-0.15, 0.92, -0.35] }, hand_r: { aim: [0.12, 0.35, 0.93], palm: [0.15, 0.92, -0.35] }, curl_l: 15, curl_r: 15,
   },
   // sitting bent over a phone in the right hand, the thumb on the screen; the left hand rests on the thigh
   sitPhoneOne: {
@@ -409,10 +410,10 @@ export const POSES = {
     frame: 'body', hip: { pos: [0, 0.165, 0], rot: [-90, 0, 90, 'ZYX'] }, spine_01: { rot: [10, 0, -2] }, spine_02: { rot: [9, 0, -3] }, spine_03: { rot: [4, 0, -2] }, neck: { rot: [12, 0, 6] }, head: { rot: [10, 0, 9] },
     leg_l: { rel: [0.1, -0.46, 0.5], pole: [0.1, 0, 1] }, leg_r: { rel: [-0.05, -0.66, 0.26], pole: [0, 0, 1] },
     foot_l: { aim: [0.1, -0.9, 0.5] }, foot_r: { aim: [0, -0.9, 0.7] },
-    // the upper (left) hand holds the phone up in front of his face, palm to him, index finger towards his head;
-    // the lower (right) arm comes forward over the mattress and that hand steadies the phone from below
-    arm_l: { rel: [0.12, 0.56, 0.54], pole: [0.3, -1, 0.2] }, hand_l: { aim: [-1, 0.15, 0.05], palm: [0, 0.15, -1] }, curl_l: 34,
-    arm_r: { rel: [0.02, 0.42, 0.45], pole: [-0.2, -1, 0.4] }, hand_r: { aim: [0.5, 0.6, 0.5], palm: [0, -0.4, -1] }, curl_r: 36,
+    // the lower (right) arm is folded up under his head on the pillow; the upper (left) forearm comes up in front of
+    // his chest and that hand holds the phone low in front of his face, palm and screen turned to him
+    arm_l: { rel: [-0.02, 0.48, 0.4], pole: [-0.3, -1, 0.4] }, hand_l: { aim: [0.75, 0.25, 0.6], palm: [0.1, 0.2, -1] }, curl_l: 40,
+    arm_r: { rel: [-0.1, 0.78, 0.06], pole: [0, 0.2, 1] }, hand_r: { aim: [0, 0.8, 0.4], palm: [-1, 0, 0] }, curl_r: 20,
   },
 };
 

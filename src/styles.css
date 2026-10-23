@@ -92,8 +92,13 @@ body { font-family: var(--font); font-size: 16px; overflow-x: hidden; -webkit-fo
 .help-card strong { font-size: 36px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
 .help-card span { font-size: 15px; line-height: 1.45; opacity: 0.82; }
 .help-card a { color: inherit; font-weight: 600; }
-.ch--final .statement.small { color: var(--ink-em); font-weight: 500; }
-.ch--final .fine { color: var(--ink-em); opacity: 0.6; }
+/* the lines above and below the help cards sit on the same frosted glass, so the crowd behind can't break them up */
+.ch--final .statement.small, .ch--final .fine {
+  box-sizing: border-box; width: min(100%, 820px); max-width: none; border-radius: 8px; color: var(--glass-ink);
+  background: var(--glass); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+}
+.ch--final .statement.small { padding: 18px 26px; font-weight: 600; }
+.ch--final .fine { padding: 10px 20px; background: rgba(255, 255, 255, 0.5); }
 .credit { position: absolute; right: calc(var(--gutter-r) + 18px); bottom: calc(22px + var(--edge-b)); display: flex; align-items: center; gap: 7px; margin: 0; color: var(--ink-soft); font-size: 12px; letter-spacing: 0; text-shadow: none; opacity: 0.8; }
 .credit svg { width: auto; height: 16px; color: var(--ink); }
 .credit b { color: var(--ink); font-weight: 600; }
