@@ -2,6 +2,7 @@ import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { store, subscribe } from '../store.js';
 import { SCENES, ACTS } from '../v2/story.js';
 import { ChatBox } from './ChatBox.jsx';
+import Credit from './Credit.jsx';
 
 // Offsets of the thought bubbles from his head: dx/dy on wide screens (scaled), mx/my in portrait. tail/mtail:
 // the corner the tail leaves from, so that it points at him (b/t: bottom or top, r/l: right or left).
@@ -151,6 +152,7 @@ function Scene({ s, i, live, sectionRef, bpmRef, breathRefs }) {
           <p className="fine">Em emergência, ligue 192 (SAMU). Esta é uma história informativa e não substitui acompanhamento profissional.</p>
         </div>
       )}
+      {s.final && <Credit />}
     </section>
   );
 }
