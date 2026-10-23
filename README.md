@@ -1,8 +1,30 @@
+<div align="center">
+
+<a href="https://dentro-da-ansiedade.vercel.app"><img src="docs/capa.jpg" alt="Primeira cena de Dentro da Ansiedade: às 6h47, o protagonista deitado na cama com a mão no rosto, sob o título Ansiedade" width="100%"></a>
+
 # Dentro da Ansiedade
+
+**Uma história interativa em 3D sobre como a ansiedade aparece, cresce e encontra saída.**
+
+<a href="https://dentro-da-ansiedade.vercel.app"><img src="https://img.shields.io/badge/%E2%96%B6%20Ver%20projeto-5059D6?style=for-the-badge" alt="Ver projeto" height="36"></a>
+
+<img src="https://img.shields.io/badge/three.js-000000?style=flat-square&logo=threedotjs&logoColor=white" alt="three.js">
+<img src="https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React">
+<img src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite">
+<img src="https://img.shields.io/badge/WebGL-990000?style=flat-square&logo=webgl&logoColor=white" alt="WebGL">
+<img src="https://img.shields.io/badge/c%C3%B3digo-MIT-3DA639?style=flat-square" alt="Código sob licença MIT">
+
+</div>
+
+<br>
 
 Site narrativo em 3D sobre ansiedade. A história avança com a rolagem, em 16 cenas e quatro atos (A manhã, O dia, A noite, A saída): um dia de alguém com ansiedade, do despertador até o pedido de ajuda. O protagonista não tem nome. O visual segue o estilo de [synthetic-humans.ai](https://synthetic-humans.ai/): pessoas escaneadas em azul lavanda, sem luz real, com borda rosada, pele de vidro, títulos enormes e desfoque de profundidade.
 
 Feito com React 18, Vite 5, three.js e as bibliotecas `postprocessing` e `n8ao`.
+
+<p align="center">
+  <img src="docs/multidao.jpg" alt="Cena da faixa de pedestres às 8h05: uma multidão atravessa a rua e o texto diz que 9,3% dos brasileiros vivem com algum transtorno de ansiedade" width="100%">
+</p>
 
 ## Rodar
 
@@ -58,3 +80,11 @@ O `vite.config.js` usa `base: './'`, então a pasta `dist/` funciona em qualquer
 - Contatos de ajuda: CVV 188 (cvv.org.br), SAMU 192, CAPS e UBS pelo SUS.
 - Licença: o código está sob a licença MIT (arquivo `LICENSE`). As pessoas em `public/models/`, `public/detail*/` e `assets-src/raw/` não entram nela, porque seguem a licença da RenderPeople.
 - O site é informativo e não substitui acompanhamento profissional. Vale revisar os textos com alguém da área de saúde mental antes de divulgar.
+
+---
+
+<div align="center">
+
+Feito por **Miguel Angelo** · [miguelrsant.com.br](https://miguelrsant.com.br) · [LinkedIn](https://www.linkedin.com/in/miguelrsant) · [GitHub](https://github.com/miguelrsant)
+
+</div>
