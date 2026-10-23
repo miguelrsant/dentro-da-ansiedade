@@ -104,6 +104,7 @@ export async function createStage({ canvas, veil, mobile }) {
   for (let d = 1; d < N; d++) { ensure(start + d); ensure(start - d); }
 
   let shown = -1, last = performance.now(), slow = 0, ratio = 1, sideNow = 0, downNow = 0;
+  let beat = 0, breathFrom = 0; // heartbeats counted so far; when the breathing scene came on
   // for tests and the video capture: the shared state, how many scenes are built, and a switch that keeps
   // the resolution fixed
   const dda = window.__dda = { store, built: () => recs.filter(Boolean).length, fixedResolution: false };
@@ -122,7 +123,7 @@ export async function createStage({ canvas, veil, mobile }) {
     if (!recs[i]) i = shown >= 0 ? shown : i;
     const r = recs[i];
     if (r) {
-      if (shown !== i) { E.show(r); shown = i; }
+      if (shown !== i) { E.show(r); shown = i; breathFrom = now / 1000; }
       const s = SCENES[i];
       const u = Math.min(1, Math.max(0, p - i + 0.5));
       const portrait = camera.aspect < 0.9;
@@ -146,11 +147,11 @@ export async function createStage({ canvas, veil, mobile }) {
 
       // heart and breath on the protagonist's glow
       store.bpm += (s.bpm - store.bpm) * (1 - Math.exp(-dt * 1.5));
-      const t = now / 1000;
+      beat += dt * store.bpm / 60;
       let k = 1;
-      if (s.pulse) { const ph = (t * store.bpm / 60) % 1; k = 0.8 + 0.5 * Math.exp(-ph * 10) + (ph > 0.25 ? 0.3 * Math.exp(-(ph - 0.25) * 10) : 0); }
-      if (s.breath) {
-        const c = t % 14, inh = c < 4, hold = c >= 4 && c < 8;
+      if (s.pulse) { const ph = beat % 1; k = 0.8 + 0.5 * Math.exp(-ph * 10) + (ph > 0.25 ? 0.3 * Math.exp(-(ph - 0.25) * 10) : 0); }
+      if (s.breath) { // the cycle starts with a breath in when the scene comes on
+        const c = (now / 1000 - breathFrom) % 14, inh = c < 4, hold = c >= 4 && c < 8;
         const b = inh ? c / 4 : hold ? 1 : 1 - (c - 8) / 6;
         store.breath = { label: inh ? 'Inspire' : hold ? 'Segure' : 'Solte', left: inh ? 4 - c : hold ? 8 - c : 14 - c, s: b };
         k = 0.55 + 0.9 * b;
