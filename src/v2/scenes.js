@@ -254,6 +254,8 @@ function phoneHeld(p, s = 'both', { glow = 0.5 } = {}) {
   const z = n.clone().multiplyScalar(0.8).add(eyes.clone().sub(c).normalize().multiplyScalar(0.2)).normalize();
   c = c.clone().addScaledVector(n, 0.029);
   const y = up.clone().addScaledVector(z, -up.dot(z)).normalize(), x = y.clone().cross(z);
+  // in both hands it lies on the palms and fingers: its bottom edge just past the heels of the hands
+  if (s === 'both') c.addScaledVector(y, 0.11);
   const g = new THREE.Group(); g.position.copy(c); g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z)); add(g);
   box(g, [0.072, 0.148, 0.009], { pos: [0, -0.074, -0.009], r: 0.004, tone: -0.35 });
   box(g, [0.064, 0.136, 0.002], { pos: [0, -0.068, -0.0005], r: 0.001, tone: 0.3, emissive: glow });
@@ -372,11 +374,8 @@ export async function s02() {
   duvet(rumple({ x0: -0.1, x1: 0.78, z0: -1.52, z1: -0.25, seed: 4 }), { ...MATTRESS, x0: -0.2, z0: -1.6 });
   const hero = person(HERO, { pose: seated('sitPhone', 0.535), pos: [-0.52, 0, -0.85], heading: -90 * D2R });
   bedPillows();
-  const l = boneAt(hero, 'hand_l'), r = boneAt(hero, 'hand_r');
-  const mid = l.clone().add(r).multiplyScalar(0.5);
-  const head = boneAt(hero, 'head', [0, 0.06, 0.08]);
-  const at = mid.clone().add(head.clone().sub(mid).normalize().multiplyScalar(0.03)).add(V3(0, 0.06, 0));
-  phone(at, head);
+  // the phone lies on both palms, the screen turned up to his face
+  const at = phoneHeld(hero, 'both', { glow: 0.55 }).position;
   glowOn(HERO, at, 0.06, 0.18);
   shoot({ pos: [-2.15, 1.35, 0.55], target: [-0.75, 0.95, -0.85], fov: 34, range: 0.9, bokeh: 4 });
 }
@@ -660,17 +659,17 @@ export async function s10() {
   P(g, 'potted_plant_02', { pos: [-2.6, 0, -2.0] });
   const top = 0.75;
   for (const [x, z] of [[-0.55, -0.62], [0.55, -0.62], [-0.55, 0.02], [0.55, 0.02], [-0.85, -0.3]]) solid(g, cyl(0.12, 0.012, 24), { pos: [x * (x === -0.85 ? 1 : 1), top + 0.006, z], tone: 0.3 });
-  for (const [x, z] of [[-0.3, -0.47], [0.75, -0.6], [-0.3, -0.13], [0.75, 0.0]]) solid(g, cyl(0.035, 0.12, 16), { pos: [x, top + 0.06, z], tone: 0.35 });
+  for (const [x, z] of [[-0.3, -0.47], [0.66, -0.6], [-0.3, -0.13], [0.75, 0.0]]) solid(g, cyl(0.035, 0.12, 16), { pos: [x, top + 0.06, z], tone: 0.35 });
   solid(g, cyl(0.17, 0.1, 24, 0.12), { pos: [0.1, top + 0.05, -0.3], tone: 0.2 });
   // family: father at the head, mother and him on one side, brother opposite; the sister just arrived with her son
   const seat = (x, z, rot) => P(g, 'dining_chair_02', { pos: [x, 0, z], rot });
-  seat(-1.25, -0.3, 90); seat(-0.55, -1.12, 0); seat(0.55, -1.12, 0); seat(-0.55, 0.52, 180);
+  seat(-1.25, -0.3, 90); seat(-0.55, -1.12, 0); seat(0.47, -1.12, 0); seat(-0.47, 0.52, 180);
   // he holds his glass without drinking, eyes on his plate
-  const hero = gripBar(HERO, { pose: seated('tableGlass', 0.47), pos: [0.55, 0, -1.08], heading: 0, lookAt: [0.53, 0.76, -0.6] }, 'l', { at: [0.75, 0, -0.6], r: 0.035 });
+  const hero = gripBar(HERO, { pose: seated('tableGlass', 0.47), pos: [0.47, 0, -1.08], heading: 0, lookAt: [0.45, 0.76, -0.6] }, 'l', { at: [0.66, 0, -0.6], r: 0.035 });
   const eyes = boneAt(hero, 'head', [0, 0.06, 0.08]).toArray();
   fit('eric', { pose: seated('table', 0.47), pos: [-1.22, 0, -0.3], heading: 90 * D2R, lookAt: eyes }, { props: true });
-  fit('sophia', { pose: seated('table', 0.47), pos: [-0.55, 0, -1.08], heading: 0, lookAt: eyes }, { props: true });
-  fit('manuel', { pose: seated('table', 0.47), pos: [-0.55, 0, 0.48], heading: Math.PI, lookAt: eyes }, { props: true });
+  fit('sophia', { pose: seated('table', 0.47), pos: [-0.55, 0, -1.08], heading: 28 * D2R, lookAt: eyes }, { props: true });
+  fit('manuel', { pose: seated('table', 0.47), pos: [-0.47, 0, 0.48], heading: Math.PI, lookAt: eyes }, { props: true });
   statue('fabienne', { pos: [1.5, 0, -1.65], heading: -62 * D2R });
   glowOn(HERO, heart(hero), 0.35, 0.13, '#ffd7c4');
   const cam = V3(2.45, 1.55, 2.05);
@@ -692,8 +691,8 @@ export async function s12() {
   P(g, 'steel_frame_shelves_01', { pos: [1.85, 0, -2.05], scale: 0.085 });
   box(g, [2.8, 0.012, 1.9], { pos: [0, 0, -0.5], r: 0.006, tone: 0.12 });
   const hero = fit(HERO, { pose: { ...seated('sitHands', 0.4, 0.02), head: { rot: [6, 0, 0] } }, pos: [-0.52, 0, -1.6], heading: 16 * D2R });
-  // his friend sits upright, turned to him, hands resting on her thighs
-  fit('carla', { pose: seated('sitNeat', 0.4, 0), pos: [0.55, 0, -1.6], heading: -50 * D2R, lookAt: boneAt(hero, 'head').toArray() });
+  // his friend sits back on the sofa, upright and turned to him, feet on the floor, hands resting on her thighs
+  fit('carla', { pose: { ...seated('sitNeat', 0.4, -0.12), spine_01: { rot: [-5, 0, 0] }, spine_02: { rot: [-5, 0, 0] } }, pos: [0.55, 0, -1.6], heading: -50 * D2R, lookAt: boneAt(hero, 'head').toArray() });
   glowOn(HERO, heart(hero), 0.25, 0.13, '#ffd7c4');
   const cam = V3(1.35, 1.3, 1.75);
   shoot({ pos: cam.toArray(), target: [-0.05, 0.82, -1.5], fov: 34, focus: cam.distanceTo(boneAt(hero, 'head')), range: 1.2, bokeh: 3.5 });
@@ -717,9 +716,17 @@ export async function s13() {
   // he sits forward, forearms on his thighs, hands loosely together; she sits upright, knees together, a notebook
   // on her lap under her hands
   const hero = fit(HERO, { pose: seated('sitHands', 0.44, 0.0), pos: [-0.8, 0, -0.65], heading: 50 * D2R, lookAt: [0.1, 0.35, -0.3] });
-  const t = fit('claudia', { pose: seated('sitNeat', 0.44, -0.02), pos: [0.9, 0, -0.8], heading: -55 * D2R, lookAt: boneAt(hero, 'head', [0, 0.06, 0.08]).toArray() });
+  const neat = seated('sitNeat', 0.44, -0.1);
+  const t = fit('claudia', { pose: { ...neat, spine_01: { rot: [-5, 0, 0] }, spine_02: { rot: [-5, 0, 0] }, arm_l: { ...neat.arm_l, rel: [0.11, 0.16, 0.3] }, arm_r: { ...neat.arm_r, rel: [-0.1, 0.16, 0.3] },
+    // the hands lie flat on the notebook
+    hand_l: { aim: [-0.25, -0.1, 1], palm: [0.05, -1, -0.1] }, hand_r: { aim: [0.25, -0.1, 1], palm: [-0.05, -1, -0.1] }, curl_l: 10, curl_r: 10 }, pos: [0.9, 0, -0.8], heading: -55 * D2R, lookAt: boneAt(hero, 'head', [0, 0.06, 0.08]).toArray() });
   const lap = palmOf(t, 'l').c.lerp(palmOf(t, 'r').c, 0.5);
-  P(scene, 'binder_notebook', { pos: [lap.x, lap.y - 0.045, lap.z], rot: -55, scale: 0.8 });
+  // the prop file holds an open and a closed binder side by side: only the open one, on her lap
+  const nb = P(scene, 'binder_notebook', { pos: [lap.x, 0, lap.z], rot: -55, scale: 0.62 });
+  nb.traverse(o => { if (o.name === 'binder_notebook_closed') o.visible = false; });
+  // it lies on her thighs: its underside on their top, just under her palms
+  nb.updateMatrixWorld(true);
+  nb.position.y += boneAt(t, 'hip').y + 0.098 - new THREE.Box3().setFromObject(nb.getObjectByName('binder_notebook')).min.y;
   shoot({ pos: [0.2, 1.55, 3.3], target: [0.0, 0.8, -0.8], fov: 34, focus: 4.1, range: 1.5, bokeh: 3 });
 }
 
@@ -732,7 +739,7 @@ export async function s14() {
   P(g, 'potted_plant_01', { pos: [-1.6, 0, -1.4] });
   P(g, 'potted_plant_02', { pos: [1.9, 0, -1.3] });
   box(g, [2.2, 0.012, 1.6], { pos: [0.1, 0, -0.4], r: 0.006, tone: 0.12 });
-  const hero = person(HERO, { pose: 'breathe', pos: [0.1, 0, -0.75], heading: 22 * D2R });
+  const hero = fit(HERO, { pose: 'breathe', pos: [0.1, 0, -0.75], heading: 22 * D2R });
   glowOn(HERO, heart(hero), 0.22, 0.16, '#c9fff0');
   const cam = V3(1.11, 1.58, 1.37);
   shoot({ pos: cam.toArray(), target: [0.05, 1.34, -0.77], fov: 32, focus: cam.distanceTo(boneAt(hero, 'head')), range: 1.0, bokeh: 3.5 });
