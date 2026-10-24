@@ -138,19 +138,20 @@ function duvet(points, { x0, x1, z0, z1, top = 0.5, thick = 0.045, slope = 0.85,
     const i = Math.round((v.x - ox) / cell), j = Math.round((v.z - z0) / cell);
     if (i >= 0 && j >= 0 && i < nx && j < nz) H[j * nx + i] = Math.max(H[j * nx + i], v.y + thick);
   }
-  // D: the cloth over the body; B: the same slopes without the flat mattress level
+  // D: the cloth over the body; B: the cloth over the body points past the mattress edges only (a foot at the edge)
+  const out = (i, j) => Math.max(i < m ? m - i : 0, i > nx - 1 - m ? i - (nx - 1 - m) : 0, j > nz - 1 - m ? j - (nz - 1 - m) : 0) / m;
   const R = Math.ceil(0.4 / cell), D = new Float32Array(H), B = new Float32Array(nx * nz).fill(-Infinity);
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
     const h = H[j * nx + i]; if (h <= base + 1e-4) continue;
+    const edge = out(i, j) > 0;
     for (let dj = -R; dj <= R; dj++) for (let di = -R; di <= R; di++) {
       const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= nx || jj >= nz) continue;
       const v = h - slope * Math.hypot(di, dj) * cell;
       if (v > D[jj * nx + ii]) D[jj * nx + ii] = v;
-      if (v > B[jj * nx + ii]) B[jj * nx + ii] = v;
+      if (edge && v > B[jj * nx + ii]) B[jj * nx + ii] = v;
     }
   }
-  // past the mattress edges the cloth falls away, still over a foot or knee at the edge
-  const out = (i, j) => Math.max(i < m ? m - i : 0, i > nx - 1 - m ? i - (nx - 1 - m) : 0, j > nz - 1 - m ? j - (nz - 1 - m) : 0) / m;
+  // past the mattress edges the cloth falls away, still over whatever lies out there
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
     const t = out(i, j); if (!t) continue;
     const ei = Math.min(Math.max(i, m), nx - 1 - m), ej = Math.min(j, nz - 1 - m);
