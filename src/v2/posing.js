@@ -375,6 +375,26 @@ export const POSES = {
     base: cmu('13_05', 20), hip: onSeat(0.46, 0), plant: true, leg_l: { to: [0.11, 0, 0.48] }, leg_r: { to: [-0.13, 0, 0.45] },
     arm_l: { to: [0.14, 0.785, 0.4] }, arm_r: { rel: [-0.05, 0.13, 0.28] }, ...palmsDown(0.4, 0.15), curl_l: 30, curl_r: 26,
   },
+  // sitting up at a dining table, leaning in a little: the right forearm on it, the hand by the plate, the left hand
+  // on the thigh
+  dineR: {
+    base: cmu('13_05', 20), hip: onSeat(0.46, 0), plant: true, level: true, flat: true, ...underTable,
+    spine_01: { rot: [7, 0, 0] }, spine_02: { rot: [6, 0, 0] }, leg_l: { to: [0.06, 0, 0.6], pole: [0.02, 0, 1] },
+    arm_r: { to: [-0.2, 0.8, 0.34] }, hand_r: { aim: [0.15, -0.2, 1], palm: [0, -1, 0] }, curl_r: 14,
+    arm_l: { rel: [0.1, 0.06, 0.2] }, hand_l: { aim: [-0.3, -0.4, 1], palm: [0.1, -1, 0] }, curl_l: 26,
+  },
+  // sitting up at a dining table, both forearms on it and the hands resting together near its edge
+  dineHands: {
+    base: cmu('13_05', 20), hip: onSeat(0.46, 0), plant: true, level: true, flat: true, ...underTable,
+    arm_l: { to: [0.05, 0.81, 0.36] }, arm_r: { to: [-0.08, 0.795, 0.35] }, curl_l: 20, curl_r: 28,
+    hand_l: { aim: [-0.8, -0.1, 1], palm: [0, -1, 0] }, hand_r: { aim: [0.8, -0.05, 1], palm: [0, -1, 0] },
+  },
+  // sitting up at a dining table, the right hand round a glass on it, the left forearm on the table by the plate
+  dineGlass: {
+    base: cmu('13_05', 20), hip: onSeat(0.46, 0), plant: true, level: true, flat: true, ...underTable,
+    arm_r: { to: [-0.22, 0.82, 0.36], pole: [-0.6, -1, -0.4] }, hand_r: { aim: [0.25, 0.1, 1], palm: [1, 0, 0.1] }, curl_r: 48,
+    arm_l: { to: [0.2, 0.8, 0.34] }, hand_l: { aim: [-0.35, -0.2, 1], palm: [0, -1, 0] }, curl_l: 14,
+  },
   // sitting, phone in both hands low over the knees, head down to it
   sitPhone: {
     base: cmu('18_12', 5.8), hip: onSeat(), plant: true, level: true, neck: { rot: [10, 0, 0] }, head: { rot: [12, 0, 0] },
@@ -406,7 +426,8 @@ export const POSES = {
     spine_02: { rot: [5, 0, 0] }, spine_03: { rot: [8, 0, 0] }, neck: { rot: [16, 0, 0] }, head: { rot: [6, -16, 0] },
     // the right forearm across his chest, its elbow against his side, the hand flat on the left of his chest (on
     // his heart); the left arm lies loose along his side on the mattress, palm down
-    arm_r: { rel: [0.02, 0.29, 0.24], pole: [-1, -0.07, -0.45] }, hand_r: { aim: [0.9, 0.35, -0.24], palm: [0.25, 0.18, -0.95] }, open_r: true, curl_r: 12,
+    // the forearm lies across his chest and the hand goes on flat in line with it, fingers together on his heart side
+    arm_r: { rel: [0.04, 0.28, 0.245], pole: [-0.67, -0.74, 0] }, hand_r: { aim: [0.93, 0.36, -0.08], palm: [-0.128, 0.226, -0.966] }, open_r: true, curl_r: 10,
     arm_l: { rel: [0.24, 0.04, -0.05], pole: [1, 0, -0.3] }, hand_l: { aim: [0.1, -0.98, -0.19], palm: [0, 0.19, -0.98] }, curl_l: 25,
   },
   // lying on the right side (head towards -z, facing -x), knees bent, phone in the left hand in front of the face; the spine bends
@@ -416,8 +437,9 @@ export const POSES = {
     leg_l: { rel: [0.1, -0.46, 0.5], pole: [0.1, 0, 1] }, leg_r: { rel: [-0.05, -0.66, 0.26], pole: [0, 0, 1] },
     foot_l: { aim: [0.1, -0.9, 0.5] }, foot_r: { aim: [0, -0.9, 0.7] },
     // the lower (right) arm is folded up under his head on the pillow; the upper (left) forearm comes up in front of
-    // his chest and that hand holds the phone low in front of his face, palm and screen turned to him
-    arm_l: { rel: [0.08, 0.48, 0.5], pole: [-1, -0.8, 0.2] }, hand_l: { aim: [0.1, 0.66, 0.74], palm: [-0.14, 0.75, -0.65] }, curl_l: 40,
+    // his chest and that hand holds the phone low in front of his face, palm and screen turned to him (the hand turned
+    // a little up about the forearm, so the phone shows over his fingers and not hidden behind the back of the hand)
+    arm_l: { rel: [0.08, 0.48, 0.5], pole: [-1, -0.8, 0.2] }, hand_l: { aim: [0.1, 0.66, 0.74], palm: [0.29, 0.696, -0.66] }, curl_l: 40,
     arm_r: { rel: [-0.1, 0.78, 0.06], pole: [0, 0.2, 1] }, hand_r: { aim: [0.03, -0.1, -1], palm: [1, 0, 0] }, curl_r: 20,
   },
 };
@@ -514,6 +536,8 @@ export const STANDING = {
   // collarbones and chest are squared instead (measured: spine, shoulder line and pelvis within 3 degrees)
   pockets: {
     ...atEase('r', { base: cmu('113_21', 3.0), shift: 0.012, drop: 0, turn: 0, step: 0.04, out: 0.12, toe: 10 }),
+    // legs nearly straight under him, the feet a hip's width apart (bent knees looked like a half squat from behind)
+    hip: { pos: [-0.012, 0.95, 0.015], rot: [2, 0, 0] }, leg_r: { to: [-0.095, 0, 0], pole: [-0.1, 0, 1] }, leg_l: { to: [0.105, 0, 0.03], pole: [0.1, 0, 1] },
     spine_01: { rot: [-2, 0, 0] }, spine_02: { rot: [0, -8, 0] }, spine_03: { rot: [2, -8, 0] }, look: [0, 1.5, 4],
     shoulder_l: { rot: [0, 0, -10] }, shoulder_r: { rot: [0, 0, -10] },
     arm_l: { rel: [0.17, -0.07, 0.08] }, hand_l: { aim: [-0.25, -1, 0.35], palm: [-1, 0, 0] }, curl_l: 34,

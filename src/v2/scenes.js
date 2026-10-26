@@ -254,11 +254,12 @@ function shortCloth(root, k = 0.2) {
   });
 }
 // Skin of the hands, without the thumbs (they go over the screen), as world positions
-function fingerSkin(p) {
+function fingerSkin(p, roots = false) {
   let mesh = null; p.root.traverse(o => { if (o.isSkinnedMesh && !mesh) mesh = o; });
   p.root.updateMatrixWorld(true); mesh.skeleton.update();
   const g = mesh.geometry, si = g.attributes.skinIndex, sw = g.attributes.skinWeight, out = [];
-  const keep = mesh.skeleton.bones.map(b => /^(hand|index|middle|ring|pinky)/.test(b.name));
+  // roots: the palm and the fingers' first segments only (fingers that close round the phone afterwards don't move it)
+  const keep = mesh.skeleton.bones.map(b => /^(hand|index|middle|ring|pinky)/.test(b.name) && !(roots && /_0[23]_/.test(b.name)));
   for (let i = 0; i < g.attributes.position.count; i++) {
     let b = 0, w = -1;
     for (let k = 0; k < 4; k++) if (sw.getComponent(i, k) > w) { w = sw.getComponent(i, k); b = si.getComponent(i, k); }
@@ -269,8 +270,8 @@ function fingerSkin(p) {
 // Turns the phone group g (the body centred on its origin, 9 mm behind it) about its width through the body's
 // centre (about `axis`, in the phone's frame), and slides it along its normal, so that it rests on the fingers under
 // its outline.
-function restOnFingers(p, g, axis) {
-  const skin = fingerSkin(p), C = V3(0, 0, -0.009), q0 = g.quaternion.clone();
+function restOnFingers(p, g, axis, roots = false) {
+  const skin = fingerSkin(p, roots), C = V3(0, 0, -0.009), q0 = g.quaternion.clone();
   const centre = q => C.clone().applyQuaternion(q0).add(g.position).sub(C.clone().applyQuaternion(q));
   let best = null;
   for (let a = -36; a <= 36; a += 2) {
@@ -350,7 +351,46 @@ function clearThumb(p, s, g) {
 // A phone held in the hands, its screen turned up towards the eyes: between both palms, or lying across one palm
 // (its top past the index finger, the fingers round one long edge, the thumb over the screen). `slide` (one hand)
 // moves it from the middle of the palm towards the fingers, so that they reach round its far edge in a grip.
-function phoneHeld(p, s = 'both', { glow = 0.5, slide = 0, thumbUnder = 0 } = {}) {
+// The fingers close round the phone's far edge: each finger's middle and end joints bend, from where the pose left
+// them (opening first if they already reach into it), until their skin touches the phone; the angles, in degrees,
+// go in g.userData.wrap. Starting from fingers already closed the way this leaves them, it changes nothing.
+function wrapFingers(p, s, g) {
+  let mesh = null; p.root.traverse(o => { if (o.isSkinnedMesh && !mesh) mesh = o; });
+  const bones = mesh.skeleton.bones, gi = mesh.geometry, si = gi.attributes.skinIndex, sw = gi.attributes.skinWeight;
+  const inv = g.quaternion.clone().invert(), v = V3(0, 0, 0), out = {};
+  const { fwd, n } = palmOf(p, s), axis = fwd.clone().cross(n).normalize(); // a positive turn brings a tip round towards the screen
+  const owner = [];
+  for (let i = 0; i < gi.attributes.position.count; i++) {
+    let b = 0, w = -1;
+    for (let k = 0; k < 4; k++) if (sw.getComponent(i, k) > w) { w = sw.getComponent(i, k); b = si.getComponent(i, k); }
+    owner.push(bones[b].name);
+  }
+  for (const f of ['index', 'middle', 'ring', 'pinky']) {
+    const ids = [];
+    owner.forEach((nm, i) => { const m = nm.match(new RegExp(`^${f}_0([23])_${s}$`)); if (m) ids.push([i, +m[1]]); });
+    // skin of joint `from` onwards inside the phone (its outline, from 1 mm behind its back to 1 mm over its screen)
+    const hits = from => {
+      p.root.updateMatrixWorld(true); mesh.skeleton.update();
+      for (const [i, k] of ids) {
+        if (k < from) continue;
+        mesh.getVertexPosition(i, v).applyMatrix4(mesh.matrixWorld).sub(g.position).applyQuaternion(inv);
+        if (Math.abs(v.x) < 0.037 && Math.abs(v.y) < 0.075 && v.z > -0.0145 && v.z < 0.001) return true;
+      }
+      return false;
+    };
+    const turn = (b, deg) => { const pq = b.parent.getWorldQuaternion(new THREE.Quaternion()); b.quaternion.premultiply(pq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(axis, deg * D2R)).multiply(pq)); };
+    for (const k of [2, 3]) {
+      const b = bones.find(x => x.name === `${f}_0${k}_${s}`); if (!b) continue;
+      let d = 0;
+      while (d > -60 && hits(k)) { turn(b, -2); d -= 2; }
+      if (d === 0) while (d < 90) { turn(b, 2); d += 2; if (hits(k)) { turn(b, -2); d -= 2; break; } }
+      out[f + k] = d;
+    }
+  }
+  p.root.updateMatrixWorld(true);
+  g.userData.wrap = out;
+}
+function phoneHeld(p, s = 'both', { glow = 0.5, slide = 0, thumbUnder = 0, wrap = false } = {}) {
   const eyes = boneAt(p, 'head', [0, 0.06, 0.08]);
   let c, n, up;
   if (s === 'both') {
@@ -373,8 +413,10 @@ function phoneHeld(p, s = 'both', { glow = 0.5, slide = 0, thumbUnder = 0 } = {}
   // the palm's plane is not the fingers' plane: lay it on the fingers instead, tipped (about its width in both hands,
   // about its length in one, the way the fingers run under it) the way that lets it sit lowest with no finger
   // through it (a plank settling on the bumps under it), its back 1 mm off the skin
-  restOnFingers(p, g, s === 'both' ? V3(1, 0, 0) : V3(0, 1, 0));
+  // wrap: the fingers then close round its far edge (it rests on the palm and the fingers' first segments)
+  restOnFingers(p, g, s === 'both' ? V3(1, 0, 0) : V3(0, 1, 0), wrap);
   if (s !== 'both') { liftThumb(p, s, g, thumbUnder); clearThumb(p, s, g); }
+  if (wrap && s !== 'both') wrapFingers(p, s, g);
   box(g, [0.072, 0.148, 0.009], { pos: [0, -0.074, -0.009], r: 0.004, tone: -0.35 });
   box(g, [0.064, 0.136, 0.002], { pos: [0, -0.068, -0.0005], r: 0.001, tone: 0.3, emissive: glow });
   return g;
@@ -506,7 +548,8 @@ export async function s11() {
   bedPillows(hero);
   duvet(under(hero, -1.3, /(arm|hand|thumb|index|middle|ring|pinky)/), { ...MATTRESS, z0: -1.3 });
   const head = boneAt(hero, 'head', [0, 0.05, 0.09]);
-  const at = phoneHeld(hero, 'l', { glow: 0.8 }).position;
+  // a little towards the fingers, so they close round its edge at their middle joints
+  const at = phoneHeld(hero, 'l', { glow: 0.8, wrap: true, slide: 0.015 }).position;
   glowOn(HERO, at, 0.45, 0.28, '#bfe9ff');
   const cam = V3(-1.48, 1.85, -0.7);
   shoot({ pos: cam.toArray(), target: [-0.18, 0.7, -1.6], fov: 34, focus: cam.distanceTo(head), range: 0.8, bokeh: 4.5 });
@@ -778,20 +821,25 @@ export async function s10() {
   P(g, 'standing_picture_frame_01', { pos: [0.9, 0.62, -2.3], rot: 20, scale: 1.2 });
   P(g, 'potted_plant_02', { pos: [-2.6, 0, -2.0] });
   const top = 0.75;
-  for (const [x, z] of [[-0.55, -0.62], [0.55, -0.62], [-0.55, 0.02], [0.55, 0.02], [-0.85, -0.3]]) solid(g, cyl(0.12, 0.012, 24), { pos: [x * (x === -0.85 ? 1 : 1), top + 0.006, z], tone: 0.3 });
-  for (const [x, z] of [[-0.3, -0.47], [0.66, -0.6], [-0.3, -0.13], [0.75, 0.0]]) solid(g, cyl(0.035, 0.12, 16), { pos: [x, top + 0.06, z], tone: 0.35 });
+  const EZ = -0.44; // the father's place at the head of the table, off its middle so the brother doesn't hide him
+  for (const [x, z] of [[-0.55, -0.62], [0.55, -0.62], [-0.55, 0.02], [0.55, 0.02], [-0.85, EZ]]) solid(g, cyl(0.12, 0.012, 24), { pos: [x * (x === -0.85 ? 1 : 1), top + 0.006, z], tone: 0.3 });
+  const mg = [-0.27, 0.15]; // the brother's glass, by his right hand
+  for (const [x, z] of [[-0.3, -0.47], [0.66, -0.6], mg, [0.75, 0.0]]) solid(g, cyl(0.035, 0.12, 16), { pos: [x, top + 0.06, z], tone: 0.35 });
   solid(g, cyl(0.17, 0.1, 24, 0.12), { pos: [0.1, top + 0.05, -0.3], tone: 0.2 });
   // family: father at the head, mother and him on one side, brother opposite; the sister just arrived with her son
   const seat = (x, z, rot) => P(g, 'dining_chair_02', { pos: [x, 0, z], rot });
   // her chair turned with her toward him
-  seat(-1.25, -0.3, 90); seat(-0.55, -1.12, 20); seat(0.47, -1.12, 0); seat(-0.47, 0.52, 180);
+  seat(-1.25, EZ, 90); seat(-0.55, -1.12, 20); seat(0.47, -1.12, 0); seat(-0.47, 0.52, 180);
   // he holds his glass without drinking, eyes on his plate
   // (his right hand lifted onto the cloth's top, the rest of the family's hands rest there too)
   const hero = gripBar(HERO, { pose: { ...seated('tableGlass', 0.47), nudge_r: [0, 0.028, 0] }, pos: [0.47, 0, -1.08], heading: 0, lookAt: [0.45, 0.76, -0.6] }, 'l', { at: [0.66, 0, -0.6], r: 0.035 });
   const eyes = boneAt(hero, 'head', [0, 0.06, 0.08]).toArray();
-  fit('eric', { pose: seated('table', 0.485), pos: [-1.22, 0, -0.3], heading: 90 * D2R, lookAt: eyes }, { props: true });
-  fit('sophia', { pose: seated('table', 0.515), pos: [-0.55, 0, -1.08], heading: 28 * D2R, lookAt: eyes }, { props: true });
-  fit('manuel', { pose: seated('table', 0.5), pos: [-0.47, 0, 0.48], heading: Math.PI, lookAt: eyes }, { props: true });
+  // the family sit up, each in a way of their own: the father with one forearm on the table and the other hand in
+  // his lap, the mother with her hands together on it, the brother holding his glass
+  fit('eric', { pose: seated('dineR', 0.485), pos: [-1.22, 0, EZ], heading: 90 * D2R, lookAt: eyes }, { props: true });
+  fit('sophia', { pose: seated('dineHands', 0.515), pos: [-0.55, 0, -1.08], heading: 28 * D2R, lookAt: eyes }, { props: true });
+  // (in the lab his left forearm is fitted onto the table first, then the right hand closed round the glass)
+  gripBar('manuel', { pose: seated('dineGlass', 0.5), pos: [-0.47, 0, 0.48], heading: Math.PI, lookAt: eyes }, 'r', { at: [mg[0], 0, mg[1]], r: 0.035, gap: 0.03 });
   statue('fabienne', { pos: [1.5, 0, -1.65], heading: -62 * D2R });
   glowOn(HERO, heart(hero), 0.35, 0.13, '#ffd7c4');
   const cam = V3(2.45, 1.55, 2.05);
@@ -840,8 +888,8 @@ export async function s13() {
   // he sits forward, forearms on his thighs, hands loosely together; she sits upright, knees together, a notebook
   // on her lap under her hands
   // he sits back in the armchair, hands resting on his thighs, and looks at her
-  // sunk a little into the cushion (2-3 cm under the hips), the feet brought in to match
-  const hero = fit(HERO, { pose: { ...seated('sitRest', 0.475, -0.11), flat: true, leg_l: { to: [0.13, 0, 0.44] }, leg_r: { to: [-0.12, 0, 0.43] }, neck: { rot: [4, 0, 0] }, head: { rot: [2, 0, 0] } }, pos: [-0.8, 0, -0.65], heading: 50 * D2R, lookAt: [0.75, 0.8, -0.75] });
+  // sunk into the soft cushion (4-5 cm under the hips, as a body sinks into it; higher read as perched on top), the feet brought in to match
+  const hero = fit(HERO, { pose: { ...seated('sitRest', 0.43, -0.11), flat: true, leg_l: { to: [0.13, 0, 0.44] }, leg_r: { to: [-0.12, 0, 0.43] }, neck: { rot: [4, 0, 0] }, head: { rot: [2, 0, 0] } }, pos: [-0.8, 0, -0.65], heading: 50 * D2R, lookAt: [0.75, 0.8, -0.75] });
   const neat = seated('sitNeat', 0.48, -0.1);
   const t = fit('claudia', { pose: { ...neat, spine_01: { rot: [-5, 0, 0] }, spine_02: { rot: [-5, 0, 0] }, arm_l: { ...neat.arm_l, rel: [0.11, 0.142, 0.3] }, arm_r: { ...neat.arm_r, rel: [-0.1, 0.142, 0.3] },
     // the hands lie flat on the notebook
