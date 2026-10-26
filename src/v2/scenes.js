@@ -834,11 +834,13 @@ export async function s10() {
   // (his right hand lifted onto the cloth's top, the rest of the family's hands rest there too)
   const hero = gripBar(HERO, { pose: { ...seated('tableGlass', 0.47), nudge_r: [0, 0.028, 0] }, pos: [0.47, 0, -1.08], heading: 0, lookAt: [0.45, 0.76, -0.6] }, 'l', { at: [0.66, 0, -0.6], r: 0.035 });
   const eyes = boneAt(hero, 'head', [0, 0.06, 0.08]).toArray();
-  // the family sit up, each in a way of their own: the father with one forearm on the table and the other hand in
-  // his lap, the mother with her hands together on it, the brother holding his glass
-  fit('eric', { pose: seated('dineR', 0.485), pos: [-1.22, 0, EZ], heading: 90 * D2R, lookAt: eyes }, { props: true });
+  // the family sit up, each in a way of their own: the father with one forearm on the table (on the mother's side,
+  // clear of the brother's hands) and the other hand in his lap, the mother with her hands together on it, the
+  // brother holding his glass, the other hand in his lap
+  fit('eric', { pose: seated('dineL', 0.485), pos: [-1.22, 0, EZ], heading: 90 * D2R, lookAt: eyes }, { props: true });
   fit('sophia', { pose: seated('dineHands', 0.515), pos: [-0.55, 0, -1.08], heading: 28 * D2R, lookAt: eyes }, { props: true });
-  // (in the lab his left forearm is fitted onto the table first, then the right hand closed round the glass)
+  // (in the lab his left hand is fitted into his lap first, clear of the table and his thigh, then the right hand
+  // closed round the glass)
   gripBar('manuel', { pose: seated('dineGlass', 0.5), pos: [-0.47, 0, 0.48], heading: Math.PI, lookAt: eyes }, 'r', { at: [mg[0], 0, mg[1]], r: 0.035, gap: 0.03 });
   statue('fabienne', { pos: [1.5, 0, -1.65], heading: -62 * D2R });
   glowOn(HERO, heart(hero), 0.35, 0.13, '#ffd7c4');

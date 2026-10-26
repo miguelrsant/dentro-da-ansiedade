@@ -359,11 +359,12 @@ export const POSES = {
     base: cmu('22_03', 2.3), hip: onSeat(0.46, 0), plant: true, flat: true, ...underTable,
     arm_l: { to: [0.2, 0.795, 0.4] }, arm_r: { to: [-0.18, 0.795, 0.43] }, ...palmsDown(0.6, 0.05), curl_l: 26, curl_r: 32,
   },
-  // the same, the left hand round a glass on the table (thumb on top, like a handshake), the right on the edge
+  // the same, the left hand round a glass on the table (thumb on top, like a handshake), the right lying flat on
+  // the edge
   tableGlass: {
     base: cmu('22_03', 2.3), hip: onSeat(0.46, 0), plant: true, level: true, flat: true, ...underTable,
     arm_l: { to: [0.26, 0.82, 0.47], pole: [0.6, -1, -0.4] }, hand_l: { aim: [-0.25, 0.1, 1], palm: [-1, 0, 0.1] }, curl_l: 48,
-    arm_r: { to: [-0.18, 0.795, 0.43] }, hand_r: { aim: [0.6, -0.05, 1], palm: [0, -1, 0] }, curl_r: 32,
+    arm_r: { to: [-0.18, 0.775, 0.43] }, hand_r: { aim: [0.5, -0.08, 1], palm: [0, -1, 0] }, curl_r: 10,
   },
   // at a meeting table with the chair turned towards the front: one forearm on the table, the other hand in
   // the lap (meetR: the table is on the right; meetL: on the left)
@@ -375,25 +376,25 @@ export const POSES = {
     base: cmu('13_05', 20), hip: onSeat(0.46, 0), plant: true, leg_l: { to: [0.11, 0, 0.48] }, leg_r: { to: [-0.13, 0, 0.45] },
     arm_l: { to: [0.14, 0.785, 0.4] }, arm_r: { rel: [-0.05, 0.13, 0.28] }, ...palmsDown(0.4, 0.15), curl_l: 30, curl_r: 26,
   },
-  // sitting up at a dining table, leaning in a little: the right forearm on it, the hand by the plate, the left hand
+  // sitting up at a dining table, leaning in a little: the left forearm on it, the hand by the plate, the right hand
   // on the thigh
-  dineR: {
+  dineL: {
     base: cmu('13_05', 20), hip: onSeat(0.46, 0), plant: true, level: true, flat: true, ...underTable,
     spine_01: { rot: [7, 0, 0] }, spine_02: { rot: [6, 0, 0] }, leg_l: { to: [0.06, 0, 0.6], pole: [0.02, 0, 1] },
-    arm_r: { to: [-0.2, 0.8, 0.34] }, hand_r: { aim: [0.15, -0.2, 1], palm: [0, -1, 0] }, curl_r: 14,
-    arm_l: { rel: [0.1, 0.06, 0.2] }, hand_l: { aim: [-0.3, -0.4, 1], palm: [0.1, -1, 0] }, curl_l: 26,
+    arm_l: { to: [0.2, 0.8, 0.34] }, hand_l: { aim: [-0.15, -0.2, 1], palm: [0, -1, 0] }, curl_l: 14,
+    arm_r: { rel: [-0.14, 0.16, 0.18] }, hand_r: { aim: [0.3, -0.4, 1], palm: [-0.1, -1, 0] }, curl_r: 26,
   },
   // sitting up at a dining table, both forearms on it and the hands resting together near its edge
   dineHands: {
     base: cmu('13_05', 20), hip: onSeat(0.46, 0), plant: true, level: true, flat: true, ...underTable,
-    arm_l: { to: [0.05, 0.81, 0.36] }, arm_r: { to: [-0.08, 0.795, 0.35] }, curl_l: 20, curl_r: 28,
+    arm_l: { to: [0.05, 0.81, 0.3] }, arm_r: { to: [-0.08, 0.795, 0.29] }, curl_l: 20, curl_r: 28,
     hand_l: { aim: [-0.8, -0.1, 1], palm: [0, -1, 0] }, hand_r: { aim: [0.8, -0.05, 1], palm: [0, -1, 0] },
   },
-  // sitting up at a dining table, the right hand round a glass on it, the left forearm on the table by the plate
+  // sitting up at a dining table, the right hand round a glass on it, the left hand on the thigh
   dineGlass: {
     base: cmu('13_05', 20), hip: onSeat(0.46, 0), plant: true, level: true, flat: true, ...underTable,
     arm_r: { to: [-0.22, 0.82, 0.36], pole: [-0.6, -1, -0.4] }, hand_r: { aim: [0.25, 0.1, 1], palm: [1, 0, 0.1] }, curl_r: 48,
-    arm_l: { to: [0.2, 0.8, 0.34] }, hand_l: { aim: [-0.35, -0.2, 1], palm: [0, -1, 0] }, curl_l: 14,
+    arm_l: { rel: [0.1, 0.06, 0.2] }, hand_l: { aim: [-0.3, -0.4, 1], palm: [0.1, -1, 0] }, curl_l: 26,
   },
   // sitting, phone in both hands low over the knees, head down to it
   sitPhone: {
