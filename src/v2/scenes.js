@@ -601,7 +601,7 @@ function crowd({ n = 40, area = [16, 18], center = [0, 0], keep = [[0, 0, 1.4]],
     const kind = R();
     const dir = (R() < 0.5 ? 0 : 180) + along + (R() - 0.5) * 40;
     if (statues && kind < 0.12) statue(['dennis', 'mei', 'fabienne'][i % 3], { pos: [x, y, z], heading: dir * D2R });
-    else if (kind < 0.25) { const n = WALKERS[i % WALKERS.length]; person(n, { pose: i % 3 === 0 ? 'phone' : idleOf(n, i), pos: [x, y, z], heading: dir * D2R }); }
+    else if (kind < 0.25) { const n = WALKERS[i % WALKERS.length]; fit(n, { pose: i % 3 === 0 ? 'phone' : idleOf(n, i), pos: [x, y, z], heading: dir * D2R }); }
     else person(WALKERS[i % WALKERS.length], { walkAt: R() * 2.2, pos: [x, y, z], heading: dir * D2R });
   });
 }
@@ -650,7 +650,7 @@ export async function s04() {
   car(g, { pos: [2.2, 0, -16], rot: 180, bus: true, tone: 0.0 });
   car(g, { pos: [-2.2, 0, -24], tone: -0.18 });
   const SPOT = [0.35, 0, 1.3];
-  const hero = person(HERO, { pose: 'pockets', pos: SPOT, heading: 8 * D2R });
+  const hero = person(HERO, { pose: 'armsDown', pos: SPOT, heading: 8 * D2R });
   crowd({ n: 30, area: [15, 3.4], center: [0, 1.25], keep: [[SPOT[0], SPOT[2], 1.25]], seed: 11, along: 90 });
   for (const sx of [-1, 1]) crowd({ n: 16, area: [3.2, 30], center: [sx * 6.5, -9], keep: [], seed: 12 + sx, along: 0, y: 0.15 });
   glowOn(HERO, heart(hero), 0.35, 0.16, '#ffd1ec');
@@ -949,13 +949,13 @@ export async function s15() {
 export async function s16() {
   await begin('lavender', []);
   const ring = [['carla', 0.8, 0.3], ['sophia', -0.85, -0.05], ['eric', -1.45, -0.85], ['manuel', 1.5, -0.6], ['claudia', 0.45, -1.3], ['dennis', -0.6, -1.85], ['mei', 2.15, -1.6], ['fabienne', -2.2, -1.9]];
-  const hero = person(HERO, { pose: 'pockets', pos: [0, 0, 0], heading: 0 });
+  const hero = person(HERO, { pose: 'armsDown', pos: [0, 0, 0], heading: 0 });
   const eyes = boneAt(hero, 'head', [0, 0.06, 0.08]).toArray();
   for (const [n, x, z] of ring) {
     // half turned to him, half to the front
     const h = Math.atan2(-x, -z) * 0.55 + Math.atan2(-x * 0.3, 3 - z * 0.2) * 0.45;
     if (['dennis', 'mei', 'fabienne'].includes(n)) statue(n, { pos: [x, 0, z], heading: h });
-    else person(n, { pose: idleOf(n, x), pos: [x, 0, z], heading: h, lookAt: eyes });
+    else fit(n, { pose: idleOf(n, x), pos: [x, 0, z], heading: h, lookAt: eyes });
   }
   crowd({ n: 26, area: [22, 10], center: [0, -8], keep: [[0, 0, 4]], seed: 5, statues: false });
   glowOn(HERO, heart(hero), 0.45, 0.16, '#ffd1ec');

@@ -472,6 +472,13 @@ export const hang = s => {
   const k = s === 'l' ? 1 : -1;
   return { ['arm_' + s]: { rel: [k * 0.215, -0.11, 0.05], pole: [k * 0.3, 0, -1] }, ['hand_' + s]: { aim: [-k * 0.08, -1, 0.12], palm: [-k, 0, 0.15] }, ['curl_' + s]: 24 };
 };
+// both arms hanging loose a little out from the hips, the hands turned out and back so the curled fingertips stay
+// off the trousers: the men's captured idles had their hands in their pockets, and the scans have no real pockets,
+// so those hands sank into the jeans
+export const loose = (x = 0.25) => ({
+  arm_l: { rel: [x, -0.07, 0.05], pole: [0.3, 0, -1] }, hand_l: { aim: [0.06, -1, 0.05], palm: [-1, 0, -0.25] }, curl_l: 18,
+  arm_r: { rel: [-x, -0.07, 0.05], pole: [-0.3, 0, -1] }, hand_r: { aim: [-0.06, -1, 0.05], palm: [1, 0, -0.25] }, curl_r: 18,
+});
 export const STANDING = {
   // looking down at a phone held at chest height in the right hand
   phone: {
@@ -532,25 +539,32 @@ export const STANDING = {
     // the belly hand: the forearm runs across the front with the wrist straight, palm on the body
     arm_l: { rel: [0.05, 0.26, 0.19], pole: [1, -0.8, -0.1] }, hand_l: { aim: [-0.93, 0, 0.33], palm: [0.33, 0, -1] }, open_l: true, curl_l: 16,
   },
-  // both hands in the front pockets, standing straight and square, head level (the men in the reference).
+  // standing straight and square, head level, both arms hanging loose with the hands just off the thighs (the
+  // scans have no real pockets: hands put in them sank into the jeans).
   // No `level` here: on this capture it rolls the chest 6 degrees aside; the spine is left upright and the
   // collarbones and chest are squared instead (measured: spine, shoulder line and pelvis within 3 degrees)
-  pockets: {
+  armsDown: {
     ...atEase('r', { base: cmu('113_21', 3.0), shift: 0.012, drop: 0, turn: 0, step: 0.04, out: 0.12, toe: 10 }),
     // legs nearly straight under him, the feet a hip's width apart (bent knees looked like a half squat from behind)
     hip: { pos: [-0.012, 0.95, 0.015], rot: [2, 0, 0] }, leg_r: { to: [-0.095, 0, 0], pole: [-0.1, 0, 1] }, leg_l: { to: [0.105, 0, 0.03], pole: [0.1, 0, 1] },
     spine_01: { rot: [-2, 0, 0] }, spine_02: { rot: [0, -8, 0] }, spine_03: { rot: [2, -8, 0] }, look: [0, 1.5, 4],
     shoulder_l: { rot: [0, 0, -10] }, shoulder_r: { rot: [0, 0, -10] },
-    arm_l: { rel: [0.17, -0.07, 0.08] }, hand_l: { aim: [-0.25, -1, 0.35], palm: [-1, 0, 0] }, curl_l: 34,
-    arm_r: { rel: [-0.17, -0.07, 0.08] }, hand_r: { aim: [0.25, -1, 0.35], palm: [1, 0, 0] }, curl_r: 34,
+    // the elbows a little bent, the right more than the left, so the arms hang easy and not at attention; the hands
+    // turned in a touch, a few cm clear of the jeans
+    arm_l: { rel: [0.235, 0.06, 0.12], pole: [0.3, 0, -1] }, hand_l: { aim: [0.06, -1, 0.45], palm: [-1, 0, -0.05] }, curl_l: 24,
+    arm_r: { rel: [-0.24, 0.05, 0.09], pole: [-0.3, 0, -1] }, hand_r: { aim: [-0.06, -1, 0.3], palm: [1, 0, -0.15] }, curl_r: 18,
   },
   // arms crossed, from the capture itself
   crossed: { base: { clip: 'idle', t: 11.5 } },
   relaxed: { base: { clip: 'idle', t: 7 } },
-  // the men's idles, for crowds: captured upper bodies on an easy stance
-  stand: atEase('r'),
-  standB: atEase('l', { base: cmu('77_02', 2.7), step: 0.06, out: 0.2, toe: 15, tilt: -2 }),
-  standC: atEase('r', { base: cmu('82_08', 3.0), step: 0.15, out: 0.15 }),
-  standD: atEase('l', { base: cmu('113_21', 6.0), shift: 0.045 }),
-  waiting: { base: cmu('40_10', 11.9) },
+  // the men's idles, for crowds: captured upper bodies on an easy stance, the arms loose (built with fit(), which
+  // moves a hand that still touches a hip or a thigh clear of it)
+  stand: { ...atEase('r'), ...loose() },
+  standB: { ...atEase('l', { base: cmu('77_02', 2.7), step: 0.06, out: 0.2, toe: 15, tilt: -2 }), ...loose() },
+  standC: { ...atEase('r', { base: cmu('82_08', 3.0), step: 0.15, out: 0.15 }), ...loose() },
+  // the hips pushed well out on this one: the arms hang wider so the hands clear a loose shirt's hem (manuel's)
+  standD: { ...atEase('l', { base: cmu('113_21', 6.0), shift: 0.045 }), ...loose(0.33) },
+  // hands on the hips, from the capture; the right one moved out a little so its fingers rest on a loose shirt
+  // instead of sinking into it
+  waiting: { base: cmu('40_10', 11.9), arm_r: { rel: [-0.255, 0.12, 0.0], pole: [-0.2, 0.3, -1] } },
 };
