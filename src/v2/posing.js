@@ -425,10 +425,10 @@ export const POSES = {
   lieBack: {
     base: cmu('140_08', 0.34), frame: 'pelvis', hip: { pos: [0, 0.12, 0] },
     spine_02: { rot: [5, 0, 0] }, spine_03: { rot: [8, 0, 0] }, neck: { rot: [16, 0, 0] }, head: { rot: [6, -16, 0] },
-    // the right forearm across his chest, its elbow against his side, the hand flat on the left of his chest (on
-    // his heart); the left arm lies loose along his side on the mattress, palm down
-    // the forearm lies across his chest and the hand goes on flat in line with it, fingers together on his heart side
-    arm_r: { rel: [0.04, 0.28, 0.245], pole: [-0.67, -0.74, 0] }, hand_r: { aim: [0.93, 0.36, -0.08], palm: [-0.128, 0.226, -0.966] }, open_r: true, curl_r: 10,
+    // the right forearm across his chest, its elbow against his side, the hand on the left of his chest (on his
+    // heart), in line with the forearm, its fingers bent over the curve of the chest (from the knuckles, the tips
+    // resting on it); the left arm lies loose along his side on the mattress, palm down
+    arm_r: { rel: [0.04, 0.28, 0.245], pole: [-0.67, -0.74, 0] }, hand_r: { aim: [0.93, 0.36, -0.08], palm: [-0.128, 0.226, -0.966] }, curl_r: 26, grip_r: [1.0, 0.9, 0.6],
     arm_l: { rel: [0.24, 0.04, -0.05], pole: [1, 0, -0.3] }, hand_l: { aim: [0.1, -0.98, -0.19], palm: [0, 0.19, -0.98] }, curl_l: 25,
   },
   // lying on the right side (head towards -z, facing -x), knees bent, phone in the left hand in front of the face; the spine bends
