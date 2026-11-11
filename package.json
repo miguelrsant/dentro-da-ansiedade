@@ -6,12 +6,15 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "optimize": "node scripts/optimize.mjs"
+    "optimize": "node scripts/optimize.mjs",
+    "serve": "node seo/serve.mjs",
+    "test:agents": "node --test tests/agents/agents.test.mjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@vercel/functions": "^3.11.1",
     "n8ao": "^1.9.4",
     "postprocessing": "^6.36.4",
     "react": "^18.3.1",

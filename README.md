@@ -45,9 +45,13 @@ O `vite.config.js` usa `base: './'`, então a pasta `dist/` funciona em qualquer
 - O coração do protagonista bate no ritmo de cada cena (`bpm`): o número de batimentos no canto e o brilho no peito dele seguem esse ritmo.
 - Uma música de fundo original toca enquanto o leitor está no site: um piano calmo (68 BPM, em fá maior e ré menor) que dura 1min53 e emenda em si mesma sem corte, porque cada volta começa enquanto as últimas notas da anterior ainda soam (`src/audio/music.js`, arquivo `public/audio/respira.mp3`). O navegador só deixa tocar som depois de um clique, toque ou tecla: a música entra sozinha no primeiro deles, e o botão ao lado do menu liga e desliga (a escolha fica guardada no navegador). O arquivo só baixa depois que a cena carrega.
 - Pular de capítulo pelo menu, pelas partes da história ou pela pílula do CVV faz uma passagem curta pela cor da cena de destino e chega lá direto, sem rolar por todas as cenas do meio. A barra de rolagem do navegador fica escondida e o site desenha a sua (`src/ui/Scrollbar.jsx`): dá para arrastar, e um clique na linha anda uma cena.
-- A tela de carregamento mostra o protagonista em escultura escura (`public/loader-bust.webp`, renderizado do próprio modelo dele), o título, a marca e a porcentagem. A última cena leva, pequena no canto de baixo, a assinatura "Developed by Miguel Angelo" com a logo dele (`src/ui/Credit.jsx`). O ícone da aba é a marca da Respira (`public/favicon.svg`, que escurece ou clareia conforme o tema do navegador, mais `favicon.ico` e `apple-touch-icon.png`).
+- A tela de carregamento mostra o protagonista em escultura escura (`public/loader-bust.webp`, renderizado do próprio modelo dele), o título, a marca e a porcentagem. A última cena leva, pequena no canto de baixo, a assinatura "Site desenvolvido por Miguel Angelo" com a logo dele, que abre miguelrsant.com.br, e os links do Instagram, do repositório e da página Sobre (`src/ui/Credit.jsx`). O ícone da aba é a marca da Respira (`public/favicon.svg`, que escurece ou clareia conforme o tema do navegador, mais `favicon.ico` e `apple-touch-icon.png`).
 - `window.__dda` expõe o estado, quantas cenas já estão prontas e as batidas contadas, para testes e para a gravação de vídeo.
 - A música foi composta em código, com o mesmo piano e a mesma sala do vídeo: a partitura está em `scripts/music/score.js` e as instruções para gerar o MP3 no topo de `scripts/music/render.mjs`.
+
+## SEO e agentes de IA
+
+Metadados, JSON-LD, o texto da história sem JavaScript, as páginas Sobre, Contato e Privacidade, a 404 e o site em Markdown para agentes de IA são gerados no build por `seo/` (com `middleware.js` e `vercel.json`). Detalhes em `seo/README.md`.
 
 ## Onde mexer
 
